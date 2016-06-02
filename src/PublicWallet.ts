@@ -16,7 +16,9 @@ class PublicWallet {
   }
 
   getBalance(){
-    request.get('https://insight.bitpay.com/api/addr/1BbRFw5nvkZDRK56qtCvcy1yFR3Q2nWPgf')
+    request.get('https://insight.bitpay.com/api/addr/1BbRFw5nvkZDRK56qtCvcy1yFR3Q2nWPgf',
+      (response) => console.log(response)
+    )
   }
 }
 

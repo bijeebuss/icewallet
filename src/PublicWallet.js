@@ -9,7 +9,7 @@ var PublicWallet = (function () {
         return new bitcore.Address(this.hdPublicKey.derive(0).derive(index).publicKey);
     };
     PublicWallet.prototype.getBalance = function () {
-        request.get('https://insight.bitpay.com/api/addr/1BbRFw5nvkZDRK56qtCvcy1yFR3Q2nWPgf');
+        request.get('https://insight.bitpay.com/api/addr/1BbRFw5nvkZDRK56qtCvcy1yFR3Q2nWPgf', function (response) { return console.log(response); });
     };
     return PublicWallet;
 })();
