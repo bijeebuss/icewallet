@@ -1,5 +1,5 @@
-import {PrivateWallet} from "../src/PrivateWallet";
-import {PublicWallet} from "../src/PublicWallet";
+import {PrivateWallet} from "./PrivateWallet";
+import {PublicWallet} from "./PublicWallet";
 
 
 var privateWallet = new PrivateWallet('scheme caution cabin snack squeeze busy lava duck bleak cement medal endless');
@@ -9,4 +9,4 @@ console.log(pubKey);
 
 var publicWallet = new PublicWallet(pubKey)
 console.log(publicWallet.getAddress(0));
-publicWallet.getBalance();
+publicWallet.getBalance(0); 

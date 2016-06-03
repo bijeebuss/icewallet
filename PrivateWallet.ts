@@ -9,9 +9,9 @@ class PrivateWallet {
   constructor(seed: string){
     var mnemonic = new Mnemonic(seed);
     this.masterHdPrivKey = mnemonic.toHDPrivateKey();
-    this.accountHdPrivKey = this.masterHdPrivKey.derive("m/44'/0'/0'");
+     this.accountHdPrivKey = this.masterHdPrivKey.derive("m/44'/0'/0'");
   }
 
-}
+} 
 
 export {PrivateWallet};

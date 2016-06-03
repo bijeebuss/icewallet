@@ -1,5 +1,4 @@
-//declare var require;
-//var Client = require("bitcore-wallet-client");
+var Client = require("bitcore-wallet-client");
 //var fs = require('fs');
 import fs = require('fs');
 

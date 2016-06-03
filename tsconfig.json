@@ -6,7 +6,9 @@
         "noImplicitAny": false,
         "removeComments": true,
         "noLib": false,
-        "sourceMap": true
+        "sourceMap": true,
+        "inlineSourceMap": true,
+        "sourceRoot": "/Users/Michael/ownCloud/Source/bitcoin/IceWallet"
     },
     "exclude": [
         "node_modules",

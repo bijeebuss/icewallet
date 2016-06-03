@@ -14,11 +14,13 @@ class PublicWallet {
   getAddress(index:number):any{
     return new bitcore.Address(this.hdPublicKey.derive(0).derive(index).publicKey);
   }
-
-  getBalance(){
-    request.get('https://insight.bitpay.com/api/addr/1BbRFw5nvkZDRK56qtCvcy1yFR3Q2nWPgf',
-      (response) => console.log(response)
-    )
+ 
+  getBalance(index?:number){
+    if (index != null){  
+      request.get(this.insightUrl + 'addr/' + this.getAddress(index).toString(),
+        (err,resp,body) => console.log(body)
+      )  
+    }
   }
 }
 
