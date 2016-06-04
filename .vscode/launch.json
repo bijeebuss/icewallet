@@ -5,7 +5,7 @@
             "name": "Launch",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceRoot}/walletTest.ts",
+            "program": "${workspaceRoot}/test/walletTest.ts",
             "stopOnEntry": false,
             "args": [],
             "cwd": "${workspaceRoot}",
@@ -19,7 +19,7 @@
             },
             "externalConsole": false,
             "sourceMaps": true,
-            "outDir": null
+            "outDir": "${workspaceRoot}/bin"
         },
         {
             "name": "Attach",

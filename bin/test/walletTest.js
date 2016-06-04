@@ -1,0 +1,10 @@
+"use strict";
+var PrivateWallet_1 = require("../src/PrivateWallet");
+var PublicWallet_1 = require("../src/PublicWallet");
+var privateWallet = new PrivateWallet_1.PrivateWallet('scheme caution cabin snack squeeze busy lava duck bleak cement medal endless');
+var pubKey = privateWallet.accountHdPrivKey.hdPublicKey.toString();
+console.log(pubKey);
+var publicWallet = new PublicWallet_1.PublicWallet(pubKey);
+console.log(publicWallet.getAddress(0));
+publicWallet.getBalance(0);
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoid2FsbGV0VGVzdC5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uL3Rlc3Qvd2FsbGV0VGVzdC50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiO0FBQUEsOEJBQTRCLHNCQUFzQixDQUFDLENBQUE7QUFDbkQsNkJBQTJCLHFCQUFxQixDQUFDLENBQUE7QUFHakQsSUFBSSxhQUFhLEdBQUcsSUFBSSw2QkFBYSxDQUFDLDhFQUE4RSxDQUFDLENBQUM7QUFFdEgsSUFBSSxNQUFNLEdBQUcsYUFBYSxDQUFDLGdCQUFnQixDQUFDLFdBQVcsQ0FBQyxRQUFRLEVBQUUsQ0FBQTtBQUNsRSxPQUFPLENBQUMsR0FBRyxDQUFDLE1BQU0sQ0FBQyxDQUFDO0FBRXBCLElBQUksWUFBWSxHQUFHLElBQUksMkJBQVksQ0FBQyxNQUFNLENBQUMsQ0FBQTtBQUMzQyxPQUFPLENBQUMsR0FBRyxDQUFDLFlBQVksQ0FBQyxVQUFVLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUN4QyxZQUFZLENBQUMsVUFBVSxDQUFDLENBQUMsQ0FBQyxDQUFDIn0=
