@@ -37,7 +37,7 @@ class PublicWallet {
     var allUtxos = [];
     var self = this;
     
-    this.insightService.getUtxos(addrs, function(err,resp,body){
+    function getUtxos(err,resp,body){
       if (err){
         console.log(err)
         return;
@@ -48,12 +48,14 @@ class PublicWallet {
         startingAddress += 20;
         endingAddress   += 20;
         addrs = self.getAddressRange(startingAddress,endingAddress,false);
-        self.insightService.getUtxos(addrs, this);
+        self.insightService.getUtxos(addrs, getUtxos);
       }
       else {
         callback(err,resp,allUtxos)
       }
-    });
+    }
+    
+    this.insightService.getUtxos(addrs, getUtxos);
   }
 }
 
