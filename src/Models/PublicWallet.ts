@@ -31,8 +31,29 @@ class PublicWallet {
   }
   
   getWalletBalance(callback:request.RequestCallback){
-    var addrs = this.getAddressRange(0,20,false)
-    this.insightService.getUtxos(addrs, callback);
+    var startingAddress = 0;
+    var endingAddress = startingAddress + 19;
+    var addrs = this.getAddressRange(startingAddress,endingAddress,false);
+    var allUtxos = [];
+    var self = this;
+    
+    this.insightService.getUtxos(addrs, function(err,resp,body){
+      if (err){
+        console.log(err)
+        return;
+      }
+      var utxos:any[] = JSON.parse(body);
+      if (utxos.length > 0){
+        allUtxos.push(utxos);
+        startingAddress += 20;
+        endingAddress   += 20;
+        addrs = self.getAddressRange(startingAddress,endingAddress,false);
+        self.insightService.getUtxos(addrs, this);
+      }
+      else {
+        callback(err,resp,allUtxos)
+      }
+    });
   }
 }
 
