@@ -32,12 +32,11 @@ class PublicWallet {
   
   getWalletBalance(callback:request.RequestCallback){
     var startingAddress = 0;
-    var endingAddress = startingAddress + 19;
-    var addrs = this.getAddressRange(startingAddress,endingAddress,false);
+    var addrs = this.getAddressRange(startingAddress,startingAddress + 19,false);
     var allUtxos = [];
     var self = this;
     
-    function getUtxos(err,resp,body){
+    function combineUtxos(err,resp,body){
       if (err){
         console.log(err)
         return;
@@ -46,16 +45,15 @@ class PublicWallet {
       if (utxos.length > 0){
         allUtxos.push(utxos);
         startingAddress += 20;
-        endingAddress   += 20;
-        addrs = self.getAddressRange(startingAddress,endingAddress,false);
-        self.insightService.getUtxos(addrs, getUtxos);
+        addrs = self.getAddressRange(startingAddress, startingAddress + 19, false);
+        self.insightService.getUtxos(addrs, combineUtxos);
       }
       else {
         callback(err,resp,allUtxos)
       }
     }
     
-    this.insightService.getUtxos(addrs, getUtxos);
+    this.insightService.getUtxos(addrs, combineUtxos);
   }
 }
 
