@@ -1,11 +1,13 @@
 var bitcore = require('bitcore-lib');
+import async = require('async');
 import {InsightService} from "../Services/InsightService"
-import request = require('request');
+import * as BM from "./BitcoreModels"
 
 class PublicWallet {
-  hdPublicKey:any;
-
   insightService:InsightService = new InsightService('https://insight.bitpay.com/api/');
+  hdPublicKey:any;
+  utxos:BM.Utxo[] = [];
+  lastUpdated:Date;
 
   constructor(publicKey: string){
     this.hdPublicKey = new bitcore.HDPublicKey(publicKey);
@@ -25,35 +27,46 @@ class PublicWallet {
     return addresses;
   }
 
-  getAddressBalance(index:number, change:boolean, callback:request.RequestCallback){
+  getAddressBalance(index:number, change:boolean, callback:(error: any, resp:any, body:any) => void){
     var address = this.getAddress(index,change).toString()
     this.insightService.getAddressInfo(address, callback)
   }
   
-  getWalletBalance(callback:request.RequestCallback){
+  getUtxos(change:boolean, callback: (error: any, utxos: BM.Utxo[]) => void){
     var startingAddress = 0;
-    var addrs = this.getAddressRange(startingAddress,startingAddress + 19,false);
-    var allUtxos = [];
+    var addrs = this.getAddressRange(startingAddress,startingAddress + 19, change);
     var self = this;
     
     function combineUtxos(err,resp,body){
       if (err){
-        console.log(err)
+        callback(err,null);
         return;
       }
-      var utxos:any[] = JSON.parse(body);
+      var utxos:BM.Utxo[] = JSON.parse(body);
+      // if there is still nonempty addresses
       if (utxos.length > 0){
-        allUtxos.push(utxos);
+        // combine them
+        utxos.forEach((utxo) => self.utxos.push(utxo));
+        //increment the starting address
         startingAddress += 20;
-        addrs = self.getAddressRange(startingAddress, startingAddress + 19, false);
+        addrs = self.getAddressRange(startingAddress, startingAddress + 19, change);
+        // call the service again and repeat
         self.insightService.getUtxos(addrs, combineUtxos);
       }
       else {
-        callback(err,resp,allUtxos)
+        callback(err,self.utxos)
       }
     }
     
     this.insightService.getUtxos(addrs, combineUtxos);
+  }
+  
+  updateWallet(callback:(error: any, utxos: BM.Utxo[]) => void){
+    async.parallel([
+      (callback) => this.getUtxos(false,callback),
+      (callback) => this.getUtxos(true,callback)
+    ], 
+    (err, result) => this.lastUpdated = new Date(Date.now()))
   }
 }
 

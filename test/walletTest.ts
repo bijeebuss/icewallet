@@ -13,6 +13,10 @@ publicWallet.getAddressBalance(0,false,
   (err,resp,body) => console.log(body)
 );
 
-publicWallet.getWalletBalance(
-  (err,resp,body) => console.log(body)
-);
+// publicWallet.getUtxos(false,
+//   (err,utxos) => {}
+// );
+
+publicWallet.updateWallet(
+  (err,utxos) => {}
+)
