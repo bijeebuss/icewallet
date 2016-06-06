@@ -17,6 +17,6 @@ publicWallet.getAddressBalance(0,false,
 //   (err,utxos) => {}
 // );
 
-publicWallet.updateWallet(
-  (err,utxos) => {}
-)
+publicWallet.update((err,wallet) => {
+  console.log(wallet.balance);
+})

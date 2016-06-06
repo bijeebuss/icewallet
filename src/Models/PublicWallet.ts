@@ -7,7 +7,12 @@ class PublicWallet {
   insightService:InsightService = new InsightService('https://insight.bitpay.com/api/');
   hdPublicKey:any;
   utxos:BM.Utxo[] = [];
-  lastUpdated:Date;
+  lastUpdated:Date = new Date();
+  
+  public get balance() : number {
+    return  this.utxos.map((utxo) => utxo.amount).reduce((p,c) => c + p);
+  }
+  
 
   constructor(publicKey: string){
     this.hdPublicKey = new bitcore.HDPublicKey(publicKey);
@@ -61,12 +66,15 @@ class PublicWallet {
     this.insightService.getUtxos(addrs, combineUtxos);
   }
   
-  updateWallet(callback:(error: any, utxos: BM.Utxo[]) => void){
+  update(callback:(error: any, wallet:PublicWallet) => void){
     async.parallel([
       (callback) => this.getUtxos(false,callback),
       (callback) => this.getUtxos(true,callback)
     ], 
-    (err, result) => this.lastUpdated = new Date(Date.now()))
+      (err, result) => {
+        this.lastUpdated = new Date(Date.now());
+        callback(err, this);
+      })
   }
 }
 
