@@ -9,7 +9,7 @@ class InsightService {
     request.get(this.baseUrl + 'addr/' +  address, callback)
   }
   
-  getUtxos(addresses:string[], callback:request.RequestCallback){
+  getTransactions(addresses:string[], callback:request.RequestCallback){
     var addrs = addresses.reduce((prev, cur) => {return cur + ',' + prev} )
     
     var opts:request.CoreOptions = {
@@ -19,7 +19,7 @@ class InsightService {
         "Content-Type":"application/json"
       }
     }
-    var req = request.post('addrs/utxo/', opts, callback)
+    var req = request.post('addrs/txs/', opts, callback)
   }
 }
 
