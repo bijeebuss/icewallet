@@ -1,0 +1,33 @@
+{
+  "name": "icewallet",
+  "version": "1.0.0",
+  "description": "Cold storage enabled bitcoin wallet based on copay's bitcore",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "pi@michaelwelnick.com:/srv/git/IceWallet.git"
+  },
+  "keywords": [
+    "bitcoin",
+    "cold",
+    "storage",
+    "BIP44",
+    "BIP32",
+    "bitcoin",
+    "wallet"
+  ],
+  "author": "Michael Welnick",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^2.0.0-rc.6",
+    "bitcore-lib": "^0.13.16",
+    "bitcore-mnemonic": "^1.1.1",
+    "request": "^2.72.0"
+  }
+}
