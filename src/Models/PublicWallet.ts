@@ -10,19 +10,19 @@ class PublicWallet {
   changeAddresses:BM.AddressInfo[] = [];
   externalAddresses:BM.AddressInfo[] = [];
   lastUpdated:Date = new Date();
-  
+
   public get balance() : number {
     var changeBalance = 0;
     var externalBalance = 0;
     if (this.changeAddresses.length > 0){
-      changeBalance = this.changeAddresses.map((addr) => addr.balance).reduce((p,c) => c + p);
+      changeBalance = this.changeAddresses.map((addr) => addr.balanceSat).reduce((p,c) => c + p);
     }
     if (this.externalAddresses.length > 0){
-      externalBalance = this.externalAddresses.map((addr) => addr.balance).reduce((p,c) => c + p);
+      externalBalance = this.externalAddresses.map((addr) => addr.balanceSat).reduce((p,c) => c + p);
     }
     return changeBalance + externalBalance;
   }
-  
+
   constructor(publicKey: string){
     this.hdPublicKey = new bitcore.HDPublicKey(publicKey);
   }
@@ -32,7 +32,7 @@ class PublicWallet {
     var chain:number = change ? 1 : 0;
     return new bitcore.Address(this.hdPublicKey.derive(chain).derive(index).publicKey);
   }
-  
+
   getAddressRange(start:number, end:number, change:boolean):string[]{
     var addresses:string[] = [];
     for (var i:number = start; i <= end; i++){
@@ -50,12 +50,12 @@ class PublicWallet {
       return callback(null, JSON.parse(body));
     })
   }
-  
+
   getTransactions(change:boolean, callback: (error: any, transactions: BM.Transaction[]) => void){
     var startingAddress = 0;
     var addrs = this.getAddressRange(startingAddress,startingAddress + 19, change);
     var self = this;
-    
+
     function combine(err,resp,body){
       if (err){
         return callback(err,null);
@@ -75,10 +75,10 @@ class PublicWallet {
         callback(err,transactions)
       }
     }
-    
+
     this.insightService.getTransactions(addrs, combine);
   }
-  
+
   getAddresses(change:boolean, callback:(error:any, addrs:BM.AddressInfo[]) => void){
     // max number of concurrent requests
     var maxConcurrency = 3;
@@ -89,10 +89,10 @@ class PublicWallet {
     var emptyAddressCount = 0;
     var addresses:BM.AddressInfo[] = [];
     var errors:any[] = [];
-    
+
     function taskCallback(error:any){
       if (error){
-        return errors.push(error);  
+        return errors.push(error);
       }
     }
     //create the queue with concurrency
@@ -124,18 +124,18 @@ class PublicWallet {
       callback(errors.length > 0 ? errors : null, addresses);
     }
   }
-  
+
   // update(callback:(error: any, wallet:PublicWallet) => void){
   //   async.parallel([
   //     (callback) => this.getTransactions(false,callback),
   //     (callback) => this.getTransactions(true,callback)
-  //   ], 
+  //   ],
   //     (err, result) => {
   //       this.lastUpdated = new Date(Date.now());
   //       callback(err, this);
   //     })
   // }
-  
+
   update(callback:(error:any, wallet:PublicWallet) => void){
     async.series<BM.AddressInfo[]>([
       (cb) => this.getAddresses(false, cb),
@@ -149,17 +149,17 @@ class PublicWallet {
       callback(null, this);
     })
   }
-  
+
   createTransaction(to:string, amount:number, callback:(err,transaction) => void){
     var addrs:string[] = [];
     var total:number = 0;
-    this.externalAddresses.filter((addr) => addr.balance > 0).forEach((addr) => {
+    this.externalAddresses.filter((addr) => addr.balanceSat > 0).forEach((addr) => {
       if (total < amount){
         addrs.push(addr.addrStr);
-        total += addr.balance;
+        total += addr.balanceSat;
       }
     })
-    
+
     this.insightService.getUtxos(addrs, (err, utxos) => {
       if (err){
         return callback(err, null);
@@ -170,14 +170,14 @@ class PublicWallet {
           txId: utxo.txid,
           outputIndex: utxo.vout,
           script: utxo.scriptPubKey,
-          satoshis: bitcore.Unit.fromBTC(utxo.amount).toSatoshis()
+          satoshis: utxo.satoshis
         }
       })
-      
+
       var transaction = new bitcore.Transaction()
         .from(utxosForTransaction)  // Feed information about what unspent outputs one can use
         .to(to, amount)        // Add an output with the given amount of satoshis
-        
+
       return callback(null, transaction);
     })
   }
