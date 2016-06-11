@@ -10,7 +10,7 @@
         height: number;
         confirmations: number;
     }
-    
+
     export interface ScriptSig {
         asm: string;
         hex: string;
@@ -60,7 +60,7 @@
         valueIn: number;
         fees: number;
     }
-    
+
     export interface AddressInfo {
         addrStr: string;
         balance: number;
