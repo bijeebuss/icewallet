@@ -40,6 +40,22 @@ class InsightService {
      return callback(null, JSON.parse(body));
     })
   }
+  
+  broadcastTransaction(transaction:string, callback:(err, txid) => void){
+    var opts:request.CoreOptions = {
+      baseUrl:this.baseUrl,
+      body: JSON.stringify({rawtx:transaction}),
+      headers: {
+        "Content-Type":"application/json"
+      }
+    }
+    var req = request.post('tx/send', opts, (err,resp,body) => {
+     if (err){
+       return callback(err, null);
+     } 
+     return callback(null, JSON.parse(body).txid);
+    })
+  }
 }
 
 export {InsightService}

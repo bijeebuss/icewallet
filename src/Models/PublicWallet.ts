@@ -181,6 +181,10 @@ class PublicWallet {
       return callback(null, transaction);
     })
   }
+  
+  boradcastTransaction(transaction, callback:(err, txid) => void){
+    this.insightService.broadcastTransaction(transaction.serialize(),callback);
+  }
 }
 
 
