@@ -20,14 +20,14 @@ publicWallet.update((err, wallet) => {
     if(err){
       return console.log(err);
     }
-    
+
     console.log(wallet.balance);
-    
+
     //privateWallet.addChangeAddress(transaction);
     //privateWallet.addFee(transaction, 5000);
     //privateWallet.signTransaction(transaction);
-    
-    // wallet.boradcastTransaction(transaction, (err,txid) => {
+
+    // wallet.broadcastTransaction(transaction, (err,txid) => {
     //   if (err){
     //     return console.log(err)
     //   }
