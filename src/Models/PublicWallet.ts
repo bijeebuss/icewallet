@@ -74,7 +74,7 @@ class PublicWallet {
         self.insightService.getTransactions(addrs, combine);
       }
       else {
-        callback(err,transactions)
+        return callback(err,transactions)
       }
     }
 
@@ -123,7 +123,7 @@ class PublicWallet {
     }
     // setup the final callback
     q.drain = () => {
-      callback(errors.length > 0 ? errors : null, addresses);
+      return callback(errors.length > 0 ? errors : null, addresses);
     }
   }
 
@@ -148,7 +148,7 @@ class PublicWallet {
       }
       this.externalAddresses = results[0];
       this.changeAddresses = results[1];
-      callback(null, this);
+      return callback(null, this);
     })
   }
 
@@ -184,19 +184,23 @@ class PublicWallet {
     })
   }
 
-  broadcastTransaction(transaction, callback:(err, txid) => void){
-    this.insightService.broadcastTransaction(transaction.serialize(),callback);
-  }
-
   initiateTransaction(to:string, amount:number){
     this.createTransaction(to,amount, (err, transaction) => {
       if (err){
-        console.log(err);
+        return console.log(err);
       }
-      fs.writeFile(this.transactionExportPath, transaction.serialize(), (err) =>{
-
+      fs.writeFile(this.transactionExportPath, transaction.uncheckedSerialize(), (err) => {
+        if(err){
+          return console.log(err);
+        }
+        console.log('transaction written to ' + this.transactionExportPath);
+        return console.log('sign the transaction offline then complete it');
       })
     })
+  }
+
+  broadcastTransaction(transaction, callback:(err, txid) => void){
+    this.insightService.broadcastTransaction(transaction.serialize(),callback);
   }
 }
 
