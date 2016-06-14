@@ -2,9 +2,11 @@ var bitcore = require('bitcore-lib');
 import async = require('async');
 import {InsightService} from "../Services/InsightService"
 import * as BM from "./BitcoreModels"
+import fs = require('fs');
 
 class PublicWallet {
   insightService:InsightService = new InsightService('https://insight.bitpay.com/api/');
+  transactionExportPath:string = './data/initialTransaction.dat'
   hdPublicKey:any;
   transactions:BM.Transaction[] = [];
   changeAddresses:BM.AddressInfo[] = [];
@@ -187,7 +189,14 @@ class PublicWallet {
   }
 
   initiateTransaction(to:string, amount:number){
+    this.createTransaction(to,amount, (err, transaction) => {
+      if (err){
+        console.log(err);
+      }
+      fs.writeFile(this.transactionExportPath, transaction.serialize(), (err) =>{
 
+      })
+    })
   }
 }
 
