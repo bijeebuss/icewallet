@@ -9,44 +9,44 @@ class PrivateWallet {
   masterHdPrivKey : any;
   accountHdPrivKey: any;
   pathToAddressesIndexes:string = './data/addressIndexes.json';
-  
+
   constructor(seed: string){
     var mnemonic = new Mnemonic(seed);
     this.masterHdPrivKey = mnemonic.toHDPrivateKey();
     this.accountHdPrivKey = this.masterHdPrivKey.derive("m/44'/0'/0'");
   }
-  
+
   hdPrivateKey(index:number, change:boolean):any{
     var chain:number = change ? 1 : 0;
     return this.accountHdPrivKey.derive(chain).derive(index);
   }
-  
+
   address(index:number, change:boolean):string{
     return this.hdPrivateKey(index,change).privateKey.toAddress().toString();
   }
-  
+
   signTransaction(transaction){
     transaction.sign(this.hdPrivateKey(0,false).privateKey)
   }
-  
+
   addChangeAddress(transaction){
     transaction.change(this.address(0,true))
   }
-  
+
   addFee(transaction, fee:number){
     transaction.fee(fee);
   }
-  
+
   deposit(){
     fs.readFile(this.pathToAddressesIndexes, 'utf8', (err, data) => {
       if (err){
         throw err;
-      } 
+      }
       var addressesIndexes:AddressIndexes = JSON.parse(data);
-      
+
       var newAddress = this.address(addressesIndexes.external, false);
       console.log('Send coins to:' + newAddress);
-      
+
       const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -66,10 +66,16 @@ class PrivateWallet {
         }
         rl.close();
       });
-      
+
     });
   }
 
-} 
+  withdraw(transaction, fee:number){
+    this.addChangeAddress(transaction);
+    this.addFee(transaction, fee);
+    this.signTransaction(transaction);
+  }
+
+}
 
 export {PrivateWallet};

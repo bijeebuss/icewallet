@@ -184,17 +184,18 @@ class PublicWallet {
     })
   }
 
-  initiateTransaction(to:string, amount:number){
+  initiateTransaction(to:string, amount:number, callback:(err,transaction)=>void){
     this.createTransaction(to,amount, (err, transaction) => {
       if (err){
-        return console.log(err);
+        return callback(err,null);
       }
       fs.writeFile(this.transactionExportPath, transaction.uncheckedSerialize(), (err) => {
         if(err){
-          return console.log(err);
+          return callback(err,transaction);
         }
         console.log('transaction written to ' + this.transactionExportPath);
-        return console.log('sign the transaction offline then complete it');
+        console.log('sign the transaction offline then complete it');
+        return callback(null,transaction);
       })
     })
   }
