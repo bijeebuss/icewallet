@@ -9,6 +9,9 @@ class PrivateWallet {
   masterHdPrivKey : any;
   accountHdPrivKey: any;
   pathToAddressesIndexes:string = './data/addressIndexes.json';
+  transactionImportPath:string = './data/initialTransaction.dat';
+  transactionExportPath:string = './data/signedTransaction.dat';
+
 
   constructor(seed: string){
     var mnemonic = new Mnemonic(seed);
@@ -70,12 +73,27 @@ class PrivateWallet {
     });
   }
 
-  withdraw(transaction, fee:number){
-    this.addChangeAddress(transaction);
-    this.addFee(transaction, fee);
-    this.signTransaction(transaction);
+  withdraw(fee:number, callback:(err,transaction)=>void){
+    fs.readFile(this.transactionImportPath, (err, data) =>{
+      if(err){
+        return callback(err,null)
+      }
+      var transaction = new bitcore.Transaction(data);
+      //TODO prompt user to verify it
+      //TODO fix this to use addresses that havent been used
+      this.addChangeAddress(transaction);
+      this.addFee(transaction, fee);
+      //TODO fix this to use addresses that have been used
+      this.signTransaction(transaction);
+      fs.writeFile(this.transactionExportPath, transaction.serialize(), (err) => {
+        if(err){
+          return callback(err, transaction);
+        }
+        console.log('transaction successfull signed and written to ' + this.transactionExportPath);
+        return callback(null, transaction);
+      })
+    })
   }
-
 }
 
 export {PrivateWallet};
