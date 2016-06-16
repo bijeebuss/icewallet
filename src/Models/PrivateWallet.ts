@@ -27,17 +27,14 @@ class PrivateWallet {
   address(index:number, change:boolean):string{
     return this.hdPrivateKey(index,change).privateKey.toAddress().toString();
   }
-
-  signTransaction(transaction){
-    transaction.sign(this.hdPrivateKey(0,false).privateKey)
-  }
-
-  addChangeAddress(transaction){
-    transaction.change(this.address(0,true))
-  }
-
-  addFee(transaction, fee:number){
-    transaction.fee(fee);
+  
+  completeTransaction(transaction, fee, indexes:AddressIndexes){
+    var privateKeys = sdfasfd
+    
+    transaction
+      .change(this.address(indexes.change, true))
+      .fee(fee)
+      .sign(privateKeys);
   }
 
   deposit(){
@@ -74,17 +71,17 @@ class PrivateWallet {
   }
 
   withdraw(fee:number, callback:(err,transaction)=>void){
-    fs.readFile(this.transactionImportPath, (err, data) =>{
+    async.parallel<string>([
+      (cb) => fs.readFile(this.transactionImportPath,'utf8', cb),
+      (cb) => fs.readFile(this.pathToAddressesIndexes,'utf8', cb)
+    ], (err, results) => {
       if(err){
-        return callback(err,null)
+        return callback(err, null);
       }
-      var transaction = new bitcore.Transaction(data);
+      var transaction = new bitcore.Transaction(results[0]);
+      var indexes:AddressIndexes = JSON.parse(results[1]);
       //TODO prompt user to verify it
-      //TODO fix this to use addresses that havent been used
-      this.addChangeAddress(transaction);
-      this.addFee(transaction, fee);
-      //TODO fix this to use addresses that have been used
-      this.signTransaction(transaction);
+      this.completeTransaction(transaction, fee, indexes);
       fs.writeFile(this.transactionExportPath, transaction.serialize(), (err) => {
         if(err){
           return callback(err, transaction);
