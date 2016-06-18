@@ -4,6 +4,7 @@ import readline = require('readline');
 import {AddressIndexes} from './AddressIndexes'
 import WalletBase from './WalletBase'
 import fs = require('fs');
+import async = require('async');
 
 
 class PrivateWallet extends WalletBase {
@@ -15,7 +16,7 @@ class PrivateWallet extends WalletBase {
 
 
   constructor(seed: string){
-    super((new Mnemonic(seed)).toHDPrivateKey().hdPublicKey.toString()); // typescript makes me do this :(
+    super((new Mnemonic(seed)).toHDPrivateKey().derive("m/44'/0'/0'").hdPublicKey.toString()); // typescript makes me do this :(
     this.walletHdPrivKey = (new Mnemonic(seed)).toHDPrivateKey();
     this.accountHdPrivKey = this.walletHdPrivKey.derive("m/44'/0'/0'");
   }
@@ -33,7 +34,7 @@ class PrivateWallet extends WalletBase {
     return keys;
   }
 
-  completeTransaction(transaction, fee, indexes:AddressIndexes){
+  processTransaction(transaction, fee, indexes:AddressIndexes){
     var changePrivateKeys   = this.privateKeyRange(0, indexes.change   - 1, true); 
     var externalPrivateKeys = this.privateKeyRange(0, indexes.external - 1, false); 
     
@@ -41,6 +42,9 @@ class PrivateWallet extends WalletBase {
       .change(this.address(indexes.change, true))
       .fee(fee)
       .sign(externalPrivateKeys.concat(changePrivateKeys));
+    
+    // this performs some checks
+    transaction.serialize();
   }
 
   deposit(){
@@ -76,7 +80,7 @@ class PrivateWallet extends WalletBase {
     });
   }
 
-  withdraw(fee:number, callback:(err,transaction)=>void){
+  completeTransaction(fee:number, callback:(err,transaction)=>void){
     async.parallel<string>([
       (cb) => fs.readFile(this.transactionImportPath,'utf8', cb),
       (cb) => fs.readFile(this.pathToAddressesIndexes,'utf8', cb)
@@ -84,15 +88,22 @@ class PrivateWallet extends WalletBase {
       if(err){
         return callback(err, null);
       }
-      var transaction = new bitcore.Transaction(results[0]);
+      var transaction = new bitcore.Transaction(JSON.parse(results[0]));
       var indexes:AddressIndexes = JSON.parse(results[1]);
       //TODO prompt user to verify it
-      this.completeTransaction(transaction, fee, indexes);
-      fs.writeFile(this.transactionExportPath, transaction.serialize(), (err) => {
+      this.processTransaction(transaction, fee, indexes);
+      if (!transaction.isFullySigned()){
+        return callback('transaction is not fully signed, check yourself before you wreck yourself', transaction);
+      }
+      
+      fs.writeFile(this.transactionExportPath, JSON.stringify(transaction.toObject()), (err) => {
         if(err){
           return callback(err, transaction);
         }
-        console.log('transaction successfull signed and written to ' + this.transactionExportPath);
+        // update the change index count
+        indexes.change += 1;
+        fs.writeFile(this.pathToAddressesIndexes, JSON.stringify(indexes));
+        console.log('transaction successfully signed and written to ' + this.transactionExportPath);
         return callback(null, transaction);
       })
     })

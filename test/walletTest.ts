@@ -15,9 +15,21 @@ publicWallet.update((err, wallet) => {
   if(err){
     console.log(err);
   }
-  wallet.initiateTransaction(privateWallet.address(3,false), bitcore.Unit.fromBTC(0.0075).toSatoshis(), (err,transaction) => {
+  console.log('Confirmed Balance: ' + wallet.balance);
+  wallet.initiateTransaction(privateWallet.address(4,false), bitcore.Unit.fromBTC(0.0125).toSatoshis(), (err,transaction) => {
     if(err){
       throw err;
     }
+    privateWallet.completeTransaction(15000, (err,transaction) => {
+      if (err){
+        return console.log(err);
+      }
+      wallet.broadcastTransaction((err, txid) => {
+        if (err){
+          return console.log(err)
+        }
+        console.log('transaction broadcasted with txid: ' + txid);
+      })
+    })
   });
 })

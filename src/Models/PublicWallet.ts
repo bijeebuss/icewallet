@@ -8,6 +8,7 @@ import fs = require('fs');
 class PublicWallet extends WalletBase {
   insightService:InsightService = new InsightService('https://insight.bitpay.com/api/');
   transactionExportPath:string = './data/initialTransaction.dat'
+  transactionImportPath:string = './data/signedTransaction.dat'
   hdPublicKey:any;
   transactions:BM.Transaction[] = [];
   changeAddresses:BM.AddressInfo[] = [];
@@ -138,13 +139,20 @@ class PublicWallet extends WalletBase {
   createTransaction(to:string, amount:number, callback:(err,transaction) => void){
     var addrs:string[] = [];
     var total:number = 0;
-    this.externalAddresses.filter((addr) => addr.balanceSat > 0).forEach((addr) => {
+    var addrsWithBalance = this.externalAddresses.concat(this.changeAddresses)
+      .filter((addr) => addr.balanceSat > 0);
+    
+    addrsWithBalance.forEach((addr) => {
       if (total < amount){
         addrs.push(addr.addrStr);
         total += addr.balanceSat;
       }
     })
-
+    
+    if(total < amount){
+      return callback('you dont have enough coins', null);
+    }
+    
     this.insightService.getUtxos(addrs, (err, utxos) => {
       if (err){
         return callback(err, null);
@@ -172,8 +180,8 @@ class PublicWallet extends WalletBase {
       if (err){
         return callback(err,null);
       }
-      fs.writeFile(this.transactionExportPath, transaction.uncheckedSerialize(), (err) => {
-        if(err){
+      fs.writeFile(this.transactionExportPath, JSON.stringify(transaction.toObject()), (err) => {
+        if(err){ 
           return callback(err,transaction);
         }
         console.log('transaction written to ' + this.transactionExportPath);
@@ -183,9 +191,17 @@ class PublicWallet extends WalletBase {
     })
   }
 
-  broadcastTransaction(transaction, callback:(err, txid) => void){
-    this.insightService.broadcastTransaction(transaction.serialize(),callback);
+  broadcastTransaction(callback:(err, txid) => void){
+    fs.readFile(this.transactionImportPath, 'utf8', (err, data) => {
+      if (err){
+        return callback(err, null);
+      }
+      var transaction = new bitcore.Transaction(JSON.parse(data));
+      this.insightService.broadcastTransaction(transaction.serialize(),callback);
+    })
   }
+  
+  
 }
 
 
