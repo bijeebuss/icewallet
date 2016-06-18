@@ -2,11 +2,12 @@ var bitcore = require('bitcore-lib');
 var Mnemonic = require('bitcore-mnemonic');
 import readline = require('readline');
 import {AddressIndexes} from './AddressIndexes'
+import WalletBase from './WalletBase'
 import fs = require('fs');
 
 
-class PrivateWallet {
-  masterHdPrivKey : any;
+class PrivateWallet extends WalletBase {
+  walletHdPrivKey : any;
   accountHdPrivKey: any;
   pathToAddressesIndexes:string = './data/addressIndexes.json';
   transactionImportPath:string = './data/initialTransaction.dat';
@@ -14,27 +15,32 @@ class PrivateWallet {
 
 
   constructor(seed: string){
-    var mnemonic = new Mnemonic(seed);
-    this.masterHdPrivKey = mnemonic.toHDPrivateKey();
-    this.accountHdPrivKey = this.masterHdPrivKey.derive("m/44'/0'/0'");
+    super((new Mnemonic(seed)).toHDPrivateKey().hdPublicKey.toString()); // typescript makes me do this :(
+    this.walletHdPrivKey = (new Mnemonic(seed)).toHDPrivateKey();
+    this.accountHdPrivKey = this.walletHdPrivKey.derive("m/44'/0'/0'");
   }
 
   hdPrivateKey(index:number, change:boolean):any{
     var chain:number = change ? 1 : 0;
     return this.accountHdPrivKey.derive(chain).derive(index);
   }
-
-  address(index:number, change:boolean):string{
-    return this.hdPrivateKey(index,change).privateKey.toAddress().toString();
-  }
   
+  privateKeyRange(start:number, end:number, change:boolean):string[]{
+    var keys:string[] = [];
+    for (var i:number = start; i <= end; i++){
+      keys.push(this.hdPrivateKey(i,change).privateKey.toString());
+    }
+    return keys;
+  }
+
   completeTransaction(transaction, fee, indexes:AddressIndexes){
-    var privateKeys = sdfasfd
+    var changePrivateKeys   = this.privateKeyRange(0, indexes.change   - 1, true); 
+    var externalPrivateKeys = this.privateKeyRange(0, indexes.external - 1, false); 
     
     transaction
       .change(this.address(indexes.change, true))
       .fee(fee)
-      .sign(privateKeys);
+      .sign(externalPrivateKeys.concat(changePrivateKeys));
   }
 
   deposit(){

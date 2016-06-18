@@ -2,9 +2,10 @@ var bitcore = require('bitcore-lib');
 import async = require('async');
 import {InsightService} from "../Services/InsightService"
 import * as BM from "./BitcoreModels"
+import WalletBase from './WalletBase'
 import fs = require('fs');
 
-class PublicWallet {
+class PublicWallet extends WalletBase {
   insightService:InsightService = new InsightService('https://insight.bitpay.com/api/');
   transactionExportPath:string = './data/initialTransaction.dat'
   hdPublicKey:any;
@@ -25,26 +26,8 @@ class PublicWallet {
     return changeBalance + externalBalance;
   }
 
-  constructor(publicKey: string){
-    this.hdPublicKey = new bitcore.HDPublicKey(publicKey);
-  }
-
-  // returns an address of the given index
-  getAddress(index:number, change:boolean):any{
-    var chain:number = change ? 1 : 0;
-    return new bitcore.Address(this.hdPublicKey.derive(chain).derive(index).publicKey);
-  }
-
-  getAddressRange(start:number, end:number, change:boolean):string[]{
-    var addresses:string[] = [];
-    for (var i:number = start; i <= end; i++){
-      addresses.push(this.getAddress(i,change).toString());
-    }
-    return addresses;
-  }
-
   getAddressInfo(index:number, change:boolean, callback:(error: any, info:BM.AddressInfo) => void){
-    var address = this.getAddress(index,change).toString()
+    var address = this.address(index,change);
     this.insightService.getAddressInfo(address, (err, resp, body) => {
       if (err){
         return callback(err, null);
@@ -55,7 +38,7 @@ class PublicWallet {
 
   getTransactions(change:boolean, callback: (error: any, transactions: BM.Transaction[]) => void){
     var startingAddress = 0;
-    var addrs = this.getAddressRange(startingAddress,startingAddress + 19, change);
+    var addrs = this.addressRange(startingAddress,startingAddress + 19, change);
     var self = this;
 
     function combine(err,resp,body){
@@ -69,7 +52,7 @@ class PublicWallet {
         transactions.forEach((utxo) => self.transactions.push(utxo));
         //increment the starting address
         startingAddress += 20;
-        addrs = self.getAddressRange(startingAddress, startingAddress + 19, change);
+        addrs = self.addressRange(startingAddress, startingAddress + 19, change);
         // call the service again and repeat
         self.insightService.getTransactions(addrs, combine);
       }
