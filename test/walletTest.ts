@@ -16,7 +16,7 @@ publicWallet.update((err, wallet) => {
     console.log(err);
   }
   console.log('Confirmed Balance: ' + wallet.balance);
-  wallet.initiateTransaction(privateWallet.address(4,false), bitcore.Unit.fromBTC(0.0125).toSatoshis(), (err,transaction) => {
+  wallet.initiateTransaction(privateWallet.address(5,false), bitcore.Unit.fromBTC(0.0095).toSatoshis(), (err,transaction) => {
     if(err){
       throw err;
     }

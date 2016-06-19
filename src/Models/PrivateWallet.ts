@@ -80,6 +80,32 @@ class PrivateWallet extends WalletBase {
     });
   }
 
+  verifyTransaction(transaction, callback:(err) => void){
+    console.log('Please verify this transaction');
+    console.log('Send: '   + bitcore.Unit.fromSatoshis(1000).toBTC());
+    console.log('To:   '   + transaction);
+    console.log('Fee:  '   + bitcore.Unit.fromSatoshis(transaction.getFee()).toBTC());
+    
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+      });
+
+    rl.question('answer y/n\n', (answer) => {
+        rl.close();
+        if(answer == 'y'){
+          return callback(null);
+        }
+        else if(answer == 'n'){
+          return callback('user declined transaction');
+        }
+        else{
+          console.log('answer either "y" or "n"');
+          return callback('invalid answer');
+        }
+      });
+  }
+
   completeTransaction(fee:number, callback:(err,transaction)=>void){
     async.parallel<string>([
       (cb) => fs.readFile(this.transactionImportPath,'utf8', cb),
@@ -90,21 +116,27 @@ class PrivateWallet extends WalletBase {
       }
       var transaction = new bitcore.Transaction(JSON.parse(results[0]));
       var indexes:AddressIndexes = JSON.parse(results[1]);
-      //TODO prompt user to verify it
+      
       this.processTransaction(transaction, fee, indexes);
       if (!transaction.isFullySigned()){
         return callback('transaction is not fully signed, check yourself before you wreck yourself', transaction);
       }
       
-      fs.writeFile(this.transactionExportPath, JSON.stringify(transaction.toObject()), (err) => {
-        if(err){
+      this.verifyTransaction(transaction, (err) => {
+        if (err){
           return callback(err, transaction);
         }
-        // update the change index count
-        indexes.change += 1;
-        fs.writeFile(this.pathToAddressesIndexes, JSON.stringify(indexes));
-        console.log('transaction successfully signed and written to ' + this.transactionExportPath);
-        return callback(null, transaction);
+        // export the signed transaction
+        fs.writeFile(this.transactionExportPath, JSON.stringify(transaction.toObject()), (err) => {
+          if(err){
+            return callback(err, transaction);
+          }
+          // update the change index count
+          indexes.change += 1;
+          fs.writeFile(this.pathToAddressesIndexes, JSON.stringify(indexes));
+          console.log('transaction successfully signed and written to ' + this.transactionExportPath);
+          return callback(null, transaction);
+        })
       })
     })
   }
