@@ -25,26 +25,13 @@ class PrivateWallet extends WalletBase {
     var chain:number = change ? 1 : 0;
     return this.accountHdPrivKey.derive(chain).derive(index);
   }
-  
+
   privateKeyRange(start:number, end:number, change:boolean):string[]{
     var keys:string[] = [];
     for (var i:number = start; i <= end; i++){
       keys.push(this.hdPrivateKey(i,change).privateKey.toString());
     }
     return keys;
-  }
-
-  processTransaction(transaction, fee, indexes:AddressIndexes){
-    var changePrivateKeys   = this.privateKeyRange(0, indexes.change   - 1, true); 
-    var externalPrivateKeys = this.privateKeyRange(0, indexes.external - 1, false); 
-    
-    transaction
-      .change(this.address(indexes.change, true))
-      .fee(fee)
-      .sign(externalPrivateKeys.concat(changePrivateKeys));
-    
-    // this performs some checks
-    transaction.serialize();
   }
 
   deposit(){
@@ -80,12 +67,25 @@ class PrivateWallet extends WalletBase {
     });
   }
 
+  processTransaction(transaction, fee, indexes:AddressIndexes){
+    var changePrivateKeys   = this.privateKeyRange(0, indexes.change   - 1, true);
+    var externalPrivateKeys = this.privateKeyRange(0, indexes.external - 1, false);
+
+    transaction
+      .change(this.address(indexes.change, true))
+      .fee(fee)
+      .sign(externalPrivateKeys.concat(changePrivateKeys));
+
+    // this performs some checks
+    transaction.serialize();
+  }
+
   verifyTransaction(transaction, callback:(err) => void){
     console.log('Please verify this transaction');
-    console.log('Send: '   + bitcore.Unit.fromSatoshis(1000).toBTC());
+    console.log('Send: '   + bitcore.Unit.fromSatoshis(transaction._getOutputAmount() - transaction.getFee()).toBTC());
     console.log('To:   '   + transaction);
     console.log('Fee:  '   + bitcore.Unit.fromSatoshis(transaction.getFee()).toBTC());
-    
+
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -116,12 +116,12 @@ class PrivateWallet extends WalletBase {
       }
       var transaction = new bitcore.Transaction(JSON.parse(results[0]));
       var indexes:AddressIndexes = JSON.parse(results[1]);
-      
+
       this.processTransaction(transaction, fee, indexes);
       if (!transaction.isFullySigned()){
         return callback('transaction is not fully signed, check yourself before you wreck yourself', transaction);
       }
-      
+
       this.verifyTransaction(transaction, (err) => {
         if (err){
           return callback(err, transaction);
