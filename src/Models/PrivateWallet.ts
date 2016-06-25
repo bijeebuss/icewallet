@@ -80,11 +80,14 @@ class PrivateWallet extends WalletBase {
     transaction.serialize();
   }
 
-  verifyTransaction(transaction, callback:(err) => void){
+  verifyTransaction(transaction, fee, callback:(err) => void){
     console.log('Please verify this transaction');
-    console.log('Send: '   + bitcore.Unit.fromSatoshis(transaction._getOutputAmount() - transaction.getFee()).toBTC());
-    console.log('To:   '   + transaction);
-    console.log('Fee:  '   + bitcore.Unit.fromSatoshis(transaction.getFee()).toBTC());
+    transaction.outputs.forEach((output) => {
+      console.log('Send: '   + bitcore.Unit.fromSatoshis(output._satoshis).toBTC());
+      console.log('To:   '   + output._script.toAddress().toString());
+    })
+
+    console.log('Fee:  '   + bitcore.Unit.fromSatoshis(fee).toBTC());
 
     const rl = readline.createInterface({
         input: process.stdin,
@@ -117,15 +120,18 @@ class PrivateWallet extends WalletBase {
       var transaction = new bitcore.Transaction(JSON.parse(results[0]));
       var indexes:AddressIndexes = JSON.parse(results[1]);
 
-      this.processTransaction(transaction, fee, indexes);
-      if (!transaction.isFullySigned()){
-        return callback('transaction is not fully signed, check yourself before you wreck yourself', transaction);
-      }
-
-      this.verifyTransaction(transaction, (err) => {
+      this.verifyTransaction(transaction, fee, (err) => {
         if (err){
           return callback(err, transaction);
         }
+
+        // add the fee, change address and sign it
+        this.processTransaction(transaction, fee, indexes);
+
+        if (!transaction.isFullySigned()){
+          return callback('transaction is not fully signed, check yourself before you wreck yourself', transaction);
+        }
+
         // export the signed transaction
         fs.writeFile(this.transactionExportPath, JSON.stringify(transaction.toObject()), (err) => {
           if(err){
