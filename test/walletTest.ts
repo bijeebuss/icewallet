@@ -2,7 +2,9 @@ import {PrivateWallet} from "../src/Models/PrivateWallet";
 import {PublicWallet} from "../src/Models/PublicWallet";
 var bitcore = require('bitcore-lib');
 
-var privateWallet = new PrivateWallet('scheme caution cabin snack squeeze busy lava duck bleak cement medal endless');
+
+var seed = 'scheme caution cabin snack squeeze busy lava duck bleak cement medal endless';
+var privateWallet = PrivateWallet.createNew('poop', './data/walletInfo.dat',false, seed, 6, 4);
 
 var pubKey = privateWallet.accountHdPrivKey.hdPublicKey.toString()
 console.log(pubKey);
@@ -20,7 +22,7 @@ publicWallet.update((err, wallet) => {
     if(err){
       throw err;
     }
-    privateWallet.completeTransaction(15000, (err,transaction) => {
+    privateWallet.completeTransaction(12000, (err,transaction) => {
       if (err){
         return console.log(err);
       }
