@@ -18,14 +18,17 @@ class PrivateWallet extends WalletBase {
   walletInfo:WalletInfo;
 
   static cryptoAlgorithm = 'aes-256-ctr';
-  static saltRounds:number = 10;
+  static keyDigest = 'sha512';
+  static keyIterations = 1000000;
+  static keyLength = 512;
+  static slt = 'salt';
 
   static loadFromInfo(password:string, path:string, callback:(err,wallet:PrivateWallet) => void){
     fs.readFile(path, 'hex', (err, data) => {
       if (err){
         return callback(err,null);
       }
-      crypto.pbkdf2(password, 'salt', 100000, 512, 'sha512', (err, key) => {
+      crypto.pbkdf2(password, PrivateWallet.slt, PrivateWallet.keyIterations, PrivateWallet.keyLength, PrivateWallet.keyDigest, (err, key) => {
         if (err){
           return callback(err,wallet);
         } 
@@ -84,7 +87,7 @@ class PrivateWallet extends WalletBase {
   }
 
   exportInfo(callback:(err) => void){
-    crypto.pbkdf2(this.password, 'salt', 100000, 512, 'sha512', (err, key) => {
+    crypto.pbkdf2(this.password, PrivateWallet.slt, PrivateWallet.keyIterations, PrivateWallet.keyLength, PrivateWallet.keyDigest, (err, key) => {
       if (err){
         return callback(err);
       } 
