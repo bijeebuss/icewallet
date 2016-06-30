@@ -111,17 +111,6 @@ class PublicWallet extends WalletBase {
     }
   }
 
-  // update(callback:(error: any, wallet:PublicWallet) => void){
-  //   async.parallel([
-  //     (callback) => this.getTransactions(false,callback),
-  //     (callback) => this.getTransactions(true,callback)
-  //   ],
-  //     (err, result) => {
-  //       this.lastUpdated = new Date(Date.now());
-  //       callback(err, this);
-  //     })
-  // }
-
   update(callback:(error:any, wallet:PublicWallet) => void){
     async.series<BM.AddressInfo[]>([
       (cb) => this.getAddresses(false, cb),
@@ -139,20 +128,21 @@ class PublicWallet extends WalletBase {
   createTransaction(to:string, amount:number, callback:(err,transaction) => void){
     var addrs:string[] = [];
     var total:number = 0;
+    var standardFee = 15000;
     var addrsWithBalance = this.externalAddresses.concat(this.changeAddresses)
       .filter((addr) => addr.balanceSat > 0);
-    
+
     addrsWithBalance.forEach((addr) => {
-      if (total < amount){
+      if (total < amount + standardFee){
         addrs.push(addr.addrStr);
         total += addr.balanceSat;
       }
     })
-    
-    if(total < amount){
-      return callback('you dont have enough coins', null);
+
+    if(total < amount + standardFee){
+      return callback('you dont have enough coins for this transaction plus a fee', null);
     }
-    
+
     this.insightService.getUtxos(addrs, (err, utxos) => {
       if (err){
         return callback(err, null);
@@ -181,7 +171,7 @@ class PublicWallet extends WalletBase {
         return callback(err,null);
       }
       fs.writeFile(this.transactionExportPath, JSON.stringify(transaction.toObject()), (err) => {
-        if(err){ 
+        if(err){
           return callback(err,transaction);
         }
         console.log('transaction written to ' + this.transactionExportPath);
@@ -200,8 +190,8 @@ class PublicWallet extends WalletBase {
       this.insightService.broadcastTransaction(transaction.serialize(),callback);
     })
   }
-  
-  
+
+
 }
 
 

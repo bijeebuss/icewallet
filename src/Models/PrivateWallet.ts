@@ -12,25 +12,25 @@ import bcrypt = require('bcrypt');
 class PrivateWallet extends WalletBase {
   walletHdPrivKey : any;
   accountHdPrivKey: any;
-  pathToInfo:string; 
+  pathToInfo:string;
   transactionImportPath:string;
-  transactionExportPath:string; 
+  transactionExportPath:string;
   password:string;
   walletInfo:WalletInfo;
-  
+
   static cryptoAlgorithm = 'aes-256-ctr';
   static saltRounds:number = 10;
 
   static loadFromInfo(password:string, path:string, callback:(err,wallet:PrivateWallet) => void){
-    fs.readFile(path, 'utf8', (err, data) => {
+    fs.readFile(path, 'hex', (err, data) => {
       if (err){
         return callback(err,null);
       }
-      bcrypt.hash(password, PrivateWallet.saltRounds, (err, hash) => {
-        if (err){
-          return callback(err,null);
-        }
-        var decipher = crypto.createDecipher(PrivateWallet.cryptoAlgorithm,hash)
+      //bcrypt.hash(password, PrivateWallet.saltRounds, (err, hash) => {
+      //  if (err){
+      //    return callback(err,null);
+      //  }
+        var decipher = crypto.createDecipher(PrivateWallet.cryptoAlgorithm,password) //,hash)
         var dec = decipher.update(data,'hex','utf8')
         dec += decipher.final('utf8');
         var walletInfo:WalletInfo = JSON.parse(dec);
@@ -38,7 +38,7 @@ class PrivateWallet extends WalletBase {
         wallet.password = password;
         wallet.pathToInfo = path;
         return callback(null,wallet);
-      });
+      //});
     });
   }
 
@@ -85,20 +85,20 @@ class PrivateWallet extends WalletBase {
   }
 
   exportInfo(callback:(err) => void){
-    bcrypt.hash(this.password, PrivateWallet.saltRounds, (err, hash) => {
-      if(err){
-        return callback(err)
-      }
-      var cipher = crypto.createCipher(PrivateWallet.cryptoAlgorithm,hash);
+    //bcrypt.hash(this.password, PrivateWallet.saltRounds, (err, hash) => {
+    //  if(err){
+    //    return callback(err)
+    //  }
+      var cipher = crypto.createCipher(PrivateWallet.cryptoAlgorithm,this.password); //,hash);
       var encrypted = cipher.update(JSON.stringify(this.walletInfo),'utf8','hex')
       encrypted += cipher.final('hex');
-      fs.writeFile(this.pathToInfo, encrypted, (err) => {
+      fs.writeFile(this.pathToInfo, new Buffer(encrypted,'hex'), (err) => {
         if (err){
           return callback(err);
         }
         return callback(null);
       })
-    });
+    //});
   }
 
   deposit(){
