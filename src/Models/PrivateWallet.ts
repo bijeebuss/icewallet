@@ -6,7 +6,7 @@ import WalletBase from './WalletBase'
 import fs = require('fs');
 import async = require('async');
 import crypto = require('crypto');
-
+import bcrypt = require('bcrypt');
 
 class PrivateWallet extends WalletBase {
   walletHdPrivKey : any;
@@ -19,7 +19,7 @@ class PrivateWallet extends WalletBase {
 
   static cryptoAlgorithm = 'aes-256-ctr';
   static keyDigest = 'sha512';
-  static keyIterations = 1000000;
+  static keyIterations = 100000;
   static keyLength = 512;
   static slt = 'salt';
 
@@ -30,17 +30,48 @@ class PrivateWallet extends WalletBase {
       }
       crypto.pbkdf2(password, PrivateWallet.slt, PrivateWallet.keyIterations, PrivateWallet.keyLength, PrivateWallet.keyDigest, (err, key) => {
         if (err){
-          return callback(err,wallet);
+          return callback(err,null);
         } 
         var decipher = crypto.createDecipher(PrivateWallet.cryptoAlgorithm,key.toString('hex'));
         var dec = decipher.update(data,'hex','utf8')
         dec += decipher.final('utf8');
         var walletInfo:WalletInfo = JSON.parse(dec);
-        var wallet = new PrivateWallet(walletInfo);
-        wallet.password = password;
-        wallet.pathToInfo = path;
-        return callback(null,wallet);
+        if(walletInfo.seed == null){
+          PrivateWallet.verifySeed(walletInfo, (err,matched) => {
+            if (err){
+              return callback(err,null)
+            }
+            var wallet = new PrivateWallet(walletInfo, password, path);
+            return callback(null,wallet);
+          });
+        }
+        else{
+          var wallet = new PrivateWallet(walletInfo, password, path);
+          return callback(null,wallet);
+        }
       });
+    });
+  }
+
+  static verifySeed(info:WalletInfo, callback:(err,matched:boolean) => void){
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+      });
+    
+    rl.question('the seed is not stored here please enter it now to open the wallet\n', (seed) => {
+        rl.close();
+        bcrypt.compare(seed, info.seedHash, (err,matched) => {
+          if (err){
+            return callback (err, false)
+          }
+          if(!matched){
+            return callback('seed entered does not match hash', false);
+          }
+          //matched
+          info.seed = seed;
+          return callback(null,true)
+        });
     });
   }
 
@@ -53,13 +84,13 @@ class PrivateWallet extends WalletBase {
     info.exportSeed = exportSeed;
     info.nextUnusedAddresses.external = externalIndex;
     info.nextUnusedAddresses.change = changeIndex;
-    var wallet = new PrivateWallet(info);
+    var wallet = new PrivateWallet(info, password, exportPath);
     wallet.password = password;
     wallet.pathToInfo = exportPath;
     return wallet;
   }
 
-  constructor(walletInfo:WalletInfo){
+  constructor(walletInfo:WalletInfo, password:string, pathToInfo:string){
     let walletHdPrivKey = (new Mnemonic(walletInfo.seed)).toHDPrivateKey();
     let accountHdPrivKey = walletHdPrivKey.derive("m/44'/0'/0'");
     super(accountHdPrivKey.hdPublicKey.toString());
@@ -68,9 +99,8 @@ class PrivateWallet extends WalletBase {
     this.transactionImportPath = './data/initialTransaction.dat';
     this.transactionExportPath = './data/signedTransaction.dat';
     this.walletInfo = walletInfo;
-    if (!this.walletInfo.exportSeed){
-      this.walletInfo.seed = null;
-    }
+    this.password = password;
+    this.pathToInfo = pathToInfo;
   }
 
   hdPrivateKey(index:number, change:boolean):any{
@@ -87,14 +117,47 @@ class PrivateWallet extends WalletBase {
   }
 
   exportInfo(callback:(err) => void){
-    crypto.pbkdf2(this.password, PrivateWallet.slt, PrivateWallet.keyIterations, PrivateWallet.keyLength, PrivateWallet.keyDigest, (err, key) => {
-      if (err){
+    async.parallel<string>({
+      // generate the encryption key
+      cryptoKey: (cb) => {
+        crypto.pbkdf2(this.password, PrivateWallet.slt, PrivateWallet.keyIterations, PrivateWallet.keyLength, PrivateWallet.keyDigest, (err, key) => {
+          if (err){
+            return cb(err);
+          } 
+          return cb(null,key.toString('hex'));
+        })
+      },
+      // hash the seed if it isnt being stored
+      seedHash: (cb) => {
+        if(this.walletInfo.exportSeed){
+          return cb(null)
+        }
+        else{
+          bcrypt.hash(this.walletInfo.seed, 5, (err, hash) => {
+            if(err){
+              return cb(err)
+            }
+            this.walletInfo.seedHash = hash;
+            return cb(null);
+          })
+        }
+      }
+    },
+    (err,results) => {
+      if(err){
         return callback(err);
-      } 
+      }
 
-      var cipher = crypto.createCipher(PrivateWallet.cryptoAlgorithm,key.toString('hex'));
+      // Dont export the seed if asked not to
+      if (!this.walletInfo.exportSeed){
+        this.walletInfo.seed = null;
+      }
+
+      // encrypt the info
+      var cipher = crypto.createCipher(PrivateWallet.cryptoAlgorithm,results['cryptoKey']);
       var encrypted = cipher.update(JSON.stringify(this.walletInfo),'utf8','hex')
       encrypted += cipher.final('hex');
+
       fs.writeFile(this.pathToInfo, new Buffer(encrypted,'hex'), (err) => {
         if (err){
           return callback(err);

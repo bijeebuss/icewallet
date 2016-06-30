@@ -1,6 +1,7 @@
 export class WalletInfo {
   seed:string
   exportSeed:boolean
+  seedHash:string
   nextUnusedAddresses:AddressIndexes
 
   constructor(){
