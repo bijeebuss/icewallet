@@ -6,7 +6,6 @@ import WalletBase from './WalletBase'
 import fs = require('fs');
 import async = require('async');
 import crypto = require('crypto');
-import bcrypt = require('bcrypt');
 
 
 class PrivateWallet extends WalletBase {
@@ -26,11 +25,11 @@ class PrivateWallet extends WalletBase {
       if (err){
         return callback(err,null);
       }
-      //bcrypt.hash(password, PrivateWallet.saltRounds, (err, hash) => {
-      //  if (err){
-      //    return callback(err,null);
-      //  }
-        var decipher = crypto.createDecipher(PrivateWallet.cryptoAlgorithm,password) //,hash)
+      crypto.pbkdf2(password, 'salt', 100000, 512, 'sha512', (err, key) => {
+        if (err){
+          return callback(err,wallet);
+        } 
+        var decipher = crypto.createDecipher(PrivateWallet.cryptoAlgorithm,key.toString('hex'));
         var dec = decipher.update(data,'hex','utf8')
         dec += decipher.final('utf8');
         var walletInfo:WalletInfo = JSON.parse(dec);
@@ -38,7 +37,7 @@ class PrivateWallet extends WalletBase {
         wallet.password = password;
         wallet.pathToInfo = path;
         return callback(null,wallet);
-      //});
+      });
     });
   }
 
@@ -85,11 +84,12 @@ class PrivateWallet extends WalletBase {
   }
 
   exportInfo(callback:(err) => void){
-    //bcrypt.hash(this.password, PrivateWallet.saltRounds, (err, hash) => {
-    //  if(err){
-    //    return callback(err)
-    //  }
-      var cipher = crypto.createCipher(PrivateWallet.cryptoAlgorithm,this.password); //,hash);
+    crypto.pbkdf2(this.password, 'salt', 100000, 512, 'sha512', (err, key) => {
+      if (err){
+        return callback(err);
+      } 
+
+      var cipher = crypto.createCipher(PrivateWallet.cryptoAlgorithm,key.toString('hex'));
       var encrypted = cipher.update(JSON.stringify(this.walletInfo),'utf8','hex')
       encrypted += cipher.final('hex');
       fs.writeFile(this.pathToInfo, new Buffer(encrypted,'hex'), (err) => {
@@ -98,7 +98,7 @@ class PrivateWallet extends WalletBase {
         }
         return callback(null);
       })
-    //});
+    });
   }
 
   deposit(){
