@@ -26,10 +26,10 @@
   "license": "ISC",
   "dependencies": {
     "async": "^2.0.0-rc.6",
-    "bcrypt": "^0.8.7",
     "bitcore-lib": "^0.13.16",
     "bitcore-mnemonic": "^1.1.1",
-    "request": "^2.72.0"
+    "request": "^2.72.0",
+    "scrypt": "^6.0.3"
   },
   "devDependencies": {
     "tsc": "^1.20150623.0",

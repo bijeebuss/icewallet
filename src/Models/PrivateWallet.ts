@@ -6,7 +6,7 @@ import WalletBase from './WalletBase'
 import fs = require('fs');
 import async = require('async');
 import crypto = require('crypto');
-import bcrypt = require('bcrypt');
+let scrypt = require('scrypt');
 
 class PrivateWallet extends WalletBase {
   walletHdPrivKey : any;
@@ -61,7 +61,7 @@ class PrivateWallet extends WalletBase {
     
     rl.question('the seed is not stored here please enter it now to open the wallet\n', (seed) => {
         rl.close();
-        bcrypt.compare(seed, info.seedHash, (err,matched) => {
+        scrypt.verifyKdf(new Buffer(info.seedHash, 'base64'), new Buffer(seed), (err, matched) => {
           if (err){
             return callback (err, false)
           }
@@ -133,11 +133,12 @@ class PrivateWallet extends WalletBase {
           return cb(null)
         }
         else{
-          bcrypt.hash(this.walletInfo.seed, 5, (err, hash) => {
+          var params = scrypt.paramsSync(10);
+          scrypt.kdf(this.walletInfo.seed, params, (err, hash) =>{
             if(err){
               return cb(err)
             }
-            this.walletInfo.seedHash = hash;
+            this.walletInfo.seedHash = hash.toString('base64');
             return cb(null);
           })
         }
