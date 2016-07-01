@@ -18,22 +18,19 @@ class PrivateWallet extends WalletBase {
   walletInfo:WalletInfo;
 
   static cryptoAlgorithm = 'aes-256-ctr';
-  static keyDigest = 'sha512';
-  static keyIterations = 100000;
   static keyLength = 512;
   static slt = 'A55F3D3A-7204-4582-906A-1EC928F79262';
-  static iv = '144564E8-331B-4FA6-A698-A230E2FB206E';
 
   static loadFromInfo(password:string, path:string, callback:(err,wallet:PrivateWallet) => void){
     fs.readFile(path, 'hex', (err, data) => {
       if (err){
         return callback(err,null);
       }
-      crypto.pbkdf2(password, PrivateWallet.slt, PrivateWallet.keyIterations, PrivateWallet.keyLength, PrivateWallet.keyDigest, (err, key) => {
+      scrypt.hash(password, {"N":16,"r":1,"p":1} ,PrivateWallet.keyLength,PrivateWallet.slt, (err, key) => {
         if (err){
           return callback(err,null);
         }
-        var decipher = crypto.createDecipheriv(PrivateWallet.cryptoAlgorithm,key.toString('hex'),PrivateWallet.iv);
+        var decipher = crypto.createDecipher(PrivateWallet.cryptoAlgorithm,key.toString('hex'));
         var dec = decipher.update(data,'hex','utf8')
         dec += decipher.final('utf8');
         var walletInfo:WalletInfo = JSON.parse(dec);
@@ -62,7 +59,7 @@ class PrivateWallet extends WalletBase {
 
     rl.question('the seed is not stored here please enter it now to open the wallet\n', (seed) => {
         rl.close();
-        scrypt.verifyKdf(new Buffer(info.seedHash, 'base64'), new Buffer(seed), (err, matched) => {
+        scrypt.verifyKdf(new Buffer(info.seedHash, 'hex'), new Buffer(seed), (err, matched) => {
           if (err){
             return callback (err, false)
           }
@@ -121,7 +118,7 @@ class PrivateWallet extends WalletBase {
     async.parallel<string>({
       // generate the encryption key
       cryptoKey: (cb) => {
-        crypto.pbkdf2(this.password, PrivateWallet.slt, PrivateWallet.keyIterations, PrivateWallet.keyLength, PrivateWallet.keyDigest, (err, key) => {
+        scrypt.hash(this.password, {"N":16,"r":1,"p":1} ,PrivateWallet.keyLength,PrivateWallet.slt, (err, key) => {
           if (err){
             return cb(err);
           }
@@ -134,12 +131,12 @@ class PrivateWallet extends WalletBase {
           return cb(null)
         }
         else{
-          var params = scrypt.paramsSync(10);
+          var params = scrypt.paramsSync(10, 750000, 0.5);
           scrypt.kdf(this.walletInfo.seed, params, (err, hash) =>{
             if(err){
               return cb(err)
             }
-            this.walletInfo.seedHash = hash.toString('base64');
+            this.walletInfo.seedHash = hash.toString('hex');
             return cb(null);
           })
         }
@@ -156,7 +153,7 @@ class PrivateWallet extends WalletBase {
       }
 
       // encrypt the info
-      var cipher = crypto.createCipheriv(PrivateWallet.cryptoAlgorithm,results['cryptoKey'],PrivateWallet.iv);
+      var cipher = crypto.createCipher(PrivateWallet.cryptoAlgorithm,results['cryptoKey']);
       var encrypted = cipher.update(JSON.stringify(this.walletInfo),'utf8','hex')
       encrypted += cipher.final('hex');
 
