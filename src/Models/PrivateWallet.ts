@@ -21,7 +21,8 @@ class PrivateWallet extends WalletBase {
   static keyDigest = 'sha512';
   static keyIterations = 100000;
   static keyLength = 512;
-  static slt = 'salt';
+  static slt = 'A55F3D3A-7204-4582-906A-1EC928F79262';
+  static iv = '144564E8-331B-4FA6-A698-A230E2FB206E';
 
   static loadFromInfo(password:string, path:string, callback:(err,wallet:PrivateWallet) => void){
     fs.readFile(path, 'hex', (err, data) => {
@@ -31,8 +32,8 @@ class PrivateWallet extends WalletBase {
       crypto.pbkdf2(password, PrivateWallet.slt, PrivateWallet.keyIterations, PrivateWallet.keyLength, PrivateWallet.keyDigest, (err, key) => {
         if (err){
           return callback(err,null);
-        } 
-        var decipher = crypto.createDecipher(PrivateWallet.cryptoAlgorithm,key.toString('hex'));
+        }
+        var decipher = crypto.createDecipheriv(PrivateWallet.cryptoAlgorithm,key.toString('hex'),PrivateWallet.iv);
         var dec = decipher.update(data,'hex','utf8')
         dec += decipher.final('utf8');
         var walletInfo:WalletInfo = JSON.parse(dec);
@@ -58,7 +59,7 @@ class PrivateWallet extends WalletBase {
         input: process.stdin,
         output: process.stdout
       });
-    
+
     rl.question('the seed is not stored here please enter it now to open the wallet\n', (seed) => {
         rl.close();
         bcrypt.compare(seed, info.seedHash, (err,matched) => {
@@ -123,7 +124,7 @@ class PrivateWallet extends WalletBase {
         crypto.pbkdf2(this.password, PrivateWallet.slt, PrivateWallet.keyIterations, PrivateWallet.keyLength, PrivateWallet.keyDigest, (err, key) => {
           if (err){
             return cb(err);
-          } 
+          }
           return cb(null,key.toString('hex'));
         })
       },
@@ -154,7 +155,7 @@ class PrivateWallet extends WalletBase {
       }
 
       // encrypt the info
-      var cipher = crypto.createCipher(PrivateWallet.cryptoAlgorithm,results['cryptoKey']);
+      var cipher = crypto.createCipheriv(PrivateWallet.cryptoAlgorithm,results['cryptoKey'],PrivateWallet.iv);
       var encrypted = cipher.update(JSON.stringify(this.walletInfo),'utf8','hex')
       encrypted += cipher.final('hex');
 
