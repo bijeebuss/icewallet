@@ -1,12 +1,11 @@
 var bitcore = require('bitcore-lib');
 var Mnemonic = require('bitcore-mnemonic');
+import CryptoService from '../Services/CryptoService'
 import readline = require('readline');
 import {WalletInfo} from './WalletInfo'
 import WalletBase from './WalletBase'
 import fs = require('fs');
 import async = require('async');
-import crypto = require('crypto');
-let scrypt = require('scrypt');
 
 class PrivateWallet extends WalletBase {
   walletHdPrivKey : any;
@@ -16,24 +15,20 @@ class PrivateWallet extends WalletBase {
   transactionExportPath:string;
   password:string;
   walletInfo:WalletInfo;
-
-  static cryptoAlgorithm = 'aes-256-ctr';
-  static keyLength = 512;
-  static slt = 'A55F3D3A-7204-4582-906A-1EC928F79262';
+  
+  static cryptoService = new CryptoService();
+  
 
   static loadFromInfo(password:string, path:string, callback:(err,wallet:PrivateWallet) => void){
     fs.readFile(path, 'hex', (err, data) => {
       if (err){
         return callback(err,null);
       }
-      scrypt.hash(password, {"N":16,"r":1,"p":1} ,PrivateWallet.keyLength,PrivateWallet.slt, (err, key) => {
+      this.cryptoService.decrypt(password, data, (err, decrypted) => {
         if (err){
           return callback(err,null);
         }
-        var decipher = crypto.createDecipher(PrivateWallet.cryptoAlgorithm,key.toString('hex'));
-        var dec = decipher.update(data,'hex','utf8')
-        dec += decipher.final('utf8');
-        var walletInfo:WalletInfo = JSON.parse(dec);
+        var walletInfo:WalletInfo = JSON.parse(decrypted);
         if(walletInfo.seed == null){
           PrivateWallet.verifySeed(walletInfo, (err,matched) => {
             if (err){
@@ -59,7 +54,7 @@ class PrivateWallet extends WalletBase {
 
     rl.question('the seed is not stored here please enter it now to open the wallet\n', (seed) => {
         rl.close();
-        scrypt.verifyKdf(new Buffer(info.seedHash, 'hex'), new Buffer(seed), (err, matched) => {
+        this.cryptoService.verifyHash(info.seedHash, seed, (err, matched) => {
           if (err){
             return callback (err, false)
           }
@@ -115,30 +110,23 @@ class PrivateWallet extends WalletBase {
   }
 
   exportInfo(callback:(err) => void){
+    // we can derive the key and hash the seed in parallel
     async.parallel<string>({
-      // generate the encryption key
-      cryptoKey: (cb) => {
-        scrypt.hash(this.password, {"N":16,"r":1,"p":1} ,PrivateWallet.keyLength,PrivateWallet.slt, (err, key) => {
-          if (err){
-            return cb(err);
-          }
-          return cb(null,key.toString('hex'));
-        })
-      },
-      // hash the seed if it isnt being stored
+      // derive the encryption key
+      cryptoKey: (cb) => PrivateWallet.cryptoService.deriveKey(this.password, cb),
+      // dont hash the seed if its already computed or being exported plain text
       seedHash: (cb) => {
-        if(this.walletInfo.exportSeed){
+        if(this.walletInfo.seedHash || this.walletInfo.exportSeed){
           return cb(null)
         }
         else{
-          var params = scrypt.paramsSync(10, 750000, 0.5);
-          scrypt.kdf(this.walletInfo.seed, params, (err, hash) =>{
+          PrivateWallet.cryptoService.hash(this.walletInfo.seed, (err, hash) => {
             if(err){
-              return cb(err)
+              return cb(err);
             }
-            this.walletInfo.seedHash = hash.toString('hex');
-            return cb(null);
-          })
+            this.walletInfo.seedHash = hash;
+            return cb(null, hash);
+          });
         }
       }
     },
@@ -146,16 +134,15 @@ class PrivateWallet extends WalletBase {
       if(err){
         return callback(err);
       }
+      // copy the info
+      var exportInfo = new WalletInfo();
+      exportInfo.exportSeed = this.walletInfo.exportSeed;
+      exportInfo.seedHash = this.walletInfo.seedHash;
+      exportInfo.seed = this.walletInfo.exportSeed ? this.walletInfo.seed : null;
+      exportInfo.nextUnusedAddresses.change = this.walletInfo.nextUnusedAddresses.change;
+      exportInfo.nextUnusedAddresses.external = this.walletInfo.nextUnusedAddresses.external;
 
-      // Dont export the seed if asked not to
-      if (!this.walletInfo.exportSeed){
-        this.walletInfo.seed = null;
-      }
-
-      // encrypt the info
-      var cipher = crypto.createCipher(PrivateWallet.cryptoAlgorithm,results['cryptoKey']);
-      var encrypted = cipher.update(JSON.stringify(this.walletInfo),'utf8','hex')
-      encrypted += cipher.final('hex');
+      let encrypted = PrivateWallet.cryptoService.encrypt(results['cryptoKey'], JSON.stringify(exportInfo));
 
       fs.writeFile(this.pathToInfo, new Buffer(encrypted,'hex'), (err) => {
         if (err){
