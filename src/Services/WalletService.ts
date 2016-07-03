@@ -1,6 +1,6 @@
 var bitcore = require('bitcore-lib');
 
-export default class WalletBase {
+export default class WalletService {
   hdPublicKey:any;
   
   constructor(publicKey: string){

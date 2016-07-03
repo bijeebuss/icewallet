@@ -8,7 +8,7 @@ var seed = 'scheme caution cabin snack squeeze busy lava duck bleak cement medal
 
 var privateWallet = PrivateWallet.createNew('poop', './data/walletInfo.dat',false, seed, 9, 7);
 privateWallet.exportInfo((err) => {
-  if(err){
+  if(err){ 
     throw err;
   }
   var privateWallet = PrivateWallet.loadFromInfo('poop','./data/walletInfo.dat', (err,privateWallet) => {

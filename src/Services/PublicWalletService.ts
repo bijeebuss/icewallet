@@ -1,11 +1,11 @@
 var bitcore = require('bitcore-lib');
 import async = require('async');
 import {InsightService} from "../Services/InsightService"
-import * as BM from "./BitcoreModels"
-import WalletBase from './WalletBase'
+import * as BM from "../Models/BitcoreModels"
+import WalletService from './WalletService'
 import fs = require('fs');
 
-class PublicWallet extends WalletBase {
+class PublicWalletService extends WalletService {
   insightService:InsightService = new InsightService('https://insight.bitpay.com/api/');
   transactionExportPath:string = './data/initialTransaction.dat'
   transactionImportPath:string = './data/signedTransaction.dat'
@@ -111,7 +111,7 @@ class PublicWallet extends WalletBase {
     }
   }
 
-  update(callback:(error:any, wallet:PublicWallet) => void){
+  update(callback:(error:any, wallet:PublicWalletService) => void){
     async.series<BM.AddressInfo[]>([
       (cb) => this.getAddresses(false, cb),
       (cb) => this.getAddresses(true, cb),
@@ -195,4 +195,4 @@ class PublicWallet extends WalletBase {
 }
 
 
-export {PublicWallet};
+export {PublicWalletService};
