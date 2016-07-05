@@ -61,6 +61,9 @@ export default class IceWalletPrivate {
   }
 
   verifySeed(password:string, info:WalletInfo, callback:(err, wallet:PrivateWalletService) => void){
+    inquirer.prompt([{
+      default: null,
+    }])
     rl.question('the seed is not stored in the info please enter it now to open the wallet\n', (seed) => {
         PrivateWalletService.seedWallet(password, info, seed, callback);    
     });
