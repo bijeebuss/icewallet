@@ -20,9 +20,6 @@ declare namespace commander {
         args: string[];
         _args: { required:boolean; name: string; }[];
 
-        wallet:string
-        input:string
-        output:string
         /**
          * Add command `name`.
          *

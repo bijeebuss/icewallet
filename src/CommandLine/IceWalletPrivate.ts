@@ -3,6 +3,7 @@ import fs = require('fs');
 import PrivateWalletService from '../Services/PrivateWalletService'
 import {WalletInfo} from '../Models/WalletInfo'
 import TransactionInfo from '../Models/transactionInfo'
+import inquirer = require('inquirer');
 
 const rl = readline.createInterface({
       input: process.stdin,
@@ -16,19 +17,33 @@ export default class IceWalletPrivate {
   constructor(
     public pathToWalletInfo, 
     public pathToUnsignedTransaction, 
-    public pathToSignedTransaction){
-      console.log('loading and decrypting wallet, this might take a minute')
-      this.loadWalletFromInfo('poop', pathToWalletInfo, (err,wallet) => {
-        if(err){
-          return console.log(err);
-        }
-        console.log('sucessfully loaded wallet');
-        this.wallet = wallet;
-        this.displayMenu();
-      })
+    public pathToSignedTransaction,
+    newWallet:boolean) {
+      if(newWallet){
+        this.createNewWallet((err,wallet) => {
+          if(err){
+            return console.log(err);
+          }
+          console.log('sucessfully created wallet');
+          this.wallet = wallet;
+          this.displayMenu();
+        })
+      }
+      else{
+        console.log('loading and decryting wallet from ' + this.pathToWalletInfo)
+        this.loadWalletFromInfo('poop', pathToWalletInfo, (err,wallet) => {
+          if(err){
+            return console.log(err);
+          }
+          console.log('sucessfully loaded wallet');
+          this.wallet = wallet;
+          this.displayMenu();
+        })
+      }
     }
 
   loadWalletFromInfo(password:string, path:string, callback:(err,wallet:PrivateWalletService) => void){
+    console.log('loading and decrypting wallet, this might take a minute');
     fs.readFile(path, 'hex', (err, data) => {
       if (err){
         return callback(err,null);
@@ -47,18 +62,32 @@ export default class IceWalletPrivate {
 
   verifySeed(password:string, info:WalletInfo, callback:(err, wallet:PrivateWalletService) => void){
     rl.question('the seed is not stored in the info please enter it now to open the wallet\n', (seed) => {
-        rl.close();
         PrivateWalletService.seedWallet(password, info, seed, callback);    
     });
   }
 
-  createNewWallet(password:string, exportSeed:boolean = false, seed:string = null, externalIndex:number = 0, changeIndex:number = 0) : PrivateWalletService{
-    var info = new WalletInfo();
-    info.seed = seed;
-    info.exportSeed = exportSeed;
-    info.nextUnusedAddresses.external = externalIndex;
-    info.nextUnusedAddresses.change = changeIndex;
-    return new PrivateWalletService(info, password);
+  createNewWallet(callback:(err,wallet:PrivateWalletService) => void){
+    rl.question('Please create a password for the new wallet \n', (password1) => {
+      rl.question('Please retype the password \n', (password2) => {
+        if(password1 != password2){
+          return callback('Passwords dont match', null);
+        }
+        rl.question('Please type the BIP39 Mnemonic seed for the new wallet, or leave blank for random \n', (seed) => {
+          rl.question('Do you want to export the seed with the wallet info, (exports are always encrypted) y/n? \n', (exportSeed) => {
+            rl.question('What is the starting external address index (default 0) \n', (externalIndex) => {
+              rl.question('What is the starting change address index, (default 0) \n', (changeIndex) => {
+                var info = new WalletInfo();
+                info.seed = seed;
+                info.exportSeed = exportSeed == 'y' ? true : false;
+                info.nextUnusedAddresses.external = Number(externalIndex);
+                info.nextUnusedAddresses.change = Number(changeIndex);
+                return callback(null, new PrivateWalletService(info, password1));
+              })
+            })
+          })
+        })
+      })
+    })
   }
 
   displayMenu(){
@@ -77,7 +106,6 @@ export default class IceWalletPrivate {
       else if(answer == '3'){
         this.saveAndQuit();
       }
-      rl.close();
     });
   }
 
@@ -105,7 +133,6 @@ export default class IceWalletPrivate {
       else{
         console.log('answer either "y" or "n"');
       }
-      rl.close();
       this.displayMenu();
     });
   }
@@ -125,7 +152,6 @@ export default class IceWalletPrivate {
       });
 
     rl.question('answer y/n\n', (answer) => {
-      rl.close();
       if(answer == 'y'){
         return callback(null);
       }
@@ -167,6 +193,7 @@ export default class IceWalletPrivate {
   }
 
   saveAndQuit(){
+    console.log('encerypting and saving wallet to ' + this.pathToWalletInfo)
     this.wallet.exportInfo((err, encrypted) => {
       if(err){
         console.log(err);
@@ -177,6 +204,7 @@ export default class IceWalletPrivate {
           console.log(err);
           return this.displayMenu();
         }
+        rl.close();
         console.log('Sucessfully encrypted and saved info, goodbye');
       })
     });
