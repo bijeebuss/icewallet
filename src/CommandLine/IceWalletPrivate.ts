@@ -5,11 +5,6 @@ import {WalletInfo} from '../Models/WalletInfo'
 import TransactionInfo from '../Models/transactionInfo'
 import inquirer = require('inquirer');
 
-const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-});
-
 export default class IceWalletPrivate {
 
   wallet:PrivateWalletService;
@@ -62,54 +57,91 @@ export default class IceWalletPrivate {
 
   verifySeed(password:string, info:WalletInfo, callback:(err, wallet:PrivateWalletService) => void){
     inquirer.prompt([{
-      default: null,
-    }])
-    rl.question('the seed is not stored in the info please enter it now to open the wallet\n', (seed) => {
-        PrivateWalletService.seedWallet(password, info, seed, callback);    
-    });
-  }
-
-  createNewWallet(callback:(err,wallet:PrivateWalletService) => void){
-    rl.question('Please create a password for the new wallet \n', (password1) => {
-      rl.question('Please retype the password \n', (password2) => {
-        if(password1 != password2){
-          return callback('Passwords dont match', null);
-        }
-        rl.question('Please type the BIP39 Mnemonic seed for the new wallet, or leave blank for random \n', (seed) => {
-          rl.question('Do you want to export the seed with the wallet info, (exports are always encrypted) y/n? \n', (exportSeed) => {
-            rl.question('What is the starting external address index (default 0) \n', (externalIndex) => {
-              rl.question('What is the starting change address index, (default 0) \n', (changeIndex) => {
-                var info = new WalletInfo();
-                info.seed = seed;
-                info.exportSeed = exportSeed == 'y' ? true : false;
-                info.nextUnusedAddresses.external = Number(externalIndex);
-                info.nextUnusedAddresses.change = Number(changeIndex);
-                return callback(null, new PrivateWalletService(info, password1));
-              })
-            })
-          })
-        })
-      })
+      name:'seed',
+      message:'the seed is not stored in the info please enter it now to open the wallet\n',
+    }], (answers) => {
+      PrivateWalletService.seedWallet(password, info, answers['seed'].toString(), callback); 
     })
   }
 
-  displayMenu(){
-    console.log('1. deposit');
-    console.log('2. withdraw <FeeInBTC>');
-    console.log('3. save and quit (dont quit any other way)');
+  createNewWallet(callback:(err,wallet:PrivateWalletService) => void){
+    inquirer.prompt([
+      {
+        name:'password1',
+        type:'password',
+        validate:(password) => {if(!password) return 'Password required'; else return true}
+      },
+      {
+        name:'password2',
+        type:'password',
+        validate:(password) => {if(!password) return 'Password required'; else return true}
+      }], (passwords) => {
+        if(passwords['password1'] != passwords['password2']){
+          return callback('Passwords dont match', null);
+        }
+        let password = passwords['password1'];
+        inquirer.prompt([
+          {
+            name:'seed',
+            message:'Please type the BIP39 Mnemonic seed for the new wallet, or leave blank for random',
+            default:null,
+          },
+          {
+            name:'exportSeed',
+            message:'Do you want to export the seed with the wallet info, (exports are always encrypted) y/n?',
+            type:'confirm',
+          },
+          {
+            name:'externalIndex',
+            message:'What is the starting external address index (default 0)',
+            default:0,
+            validate:(externalIndex) => {if(!Number.isInteger(Number(externalIndex))) return 'Must be an integer'; else return true}
+          },
+          {
+            name:'changeIndex',
+            message:'What is the starting change address index, (default 0)',
+            default:0,
+            validate:(changeIndex) => {if(!Number.isInteger(Number(changeIndex))) return 'Must be an integer'; else return true}
+          },
+        ],(answers) => {
+          var info = new WalletInfo();
+          info.seed = answers['seed'].toString();
+          info.exportSeed = Boolean(answers['exportSeed']);
+          info.nextUnusedAddresses.external = Number(answers['externalIndex']);
+          info.nextUnusedAddresses.change = Number(answers['changeIndex']);
+          return callback(null, new PrivateWalletService(info, password.toString()));
+        })
+      })
+  }
 
-    rl.question('choose an option\n', (answer) => {
-      if(answer == '1'){
+  displayMenu(){
+    var choices = ['Deposit', 'Withdraw', 'Save and Quit (dont quit any other way)' ]
+    inquirer.prompt([
+      {
+        name:'choice',
+        type:'list',
+        choices:choices,
+      },
+      {
+        name:'fee',
+        message:'enter your desired fee in satoshis',
+        when: (answers) => answers['Choice'] == choices[1],
+        validate:(fee) => {if(!Number.isInteger(Number(fee))) return 'Must be an integer'; else return true}
+      }], 
+      (answers) => {
+        let choice = answers['choice'];
+        let fee = Number(answers['fee']);
+
+        if(choice == choices[0]){
         this.deposit();
-      }
-      else if(answer == '2'){
-        let fee = Number(answer.split(' ')[1]);
-        this.withdraw(fee);
-      }
-      else if(answer == '3'){
-        this.saveAndQuit();
-      }
-    });
+        }
+        else if(choice == choice[1]){
+          this.withdraw(fee);
+        }
+        else if(choice == choices[2]){
+          this.saveAndQuit();
+        }
+      })
   }
 
   saveInfo(encrypted:string, callback:(err) => void){
@@ -124,20 +156,22 @@ export default class IceWalletPrivate {
   deposit(){
     var newAddress = this.wallet.getDepositAddress();
     console.log('Send coins to:' + newAddress);
-
-    rl.question('Did the transaction complete? y/n\n', (answer) => {
-      if(answer == 'y'){
-        console.log('good')
-        this.wallet.incrementExternalIndex();
-      }
-      else if(answer == 'n'){
-        console.log('try again');
-      }
-      else{
-        console.log('answer either "y" or "n"');
-      }
-      this.displayMenu();
-    });
+    inquirer.prompt(
+      {
+        name:'choice',
+        message:'Did the transaction complete? y/n',
+        type:'confirm'
+      }, 
+      (answers) => {
+        if(answers['choice']){
+          console.log('good')
+          this.wallet.incrementExternalIndex();
+        }
+        else if(answers['choice']){
+          console.log('try again');
+        }
+        this.displayMenu();
+    })
   }
 
   verifyTransaction(transaction:TransactionInfo, fee, callback:(err) => void){
@@ -207,7 +241,6 @@ export default class IceWalletPrivate {
           console.log(err);
           return this.displayMenu();
         }
-        rl.close();
         console.log('Sucessfully encrypted and saved info, goodbye');
       })
     });
