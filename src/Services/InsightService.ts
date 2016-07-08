@@ -8,7 +8,7 @@ class InsightService {
   
   getAddressInfo(address:string, callback:request.RequestCallback){
     request.get(this.baseUrl + 'addr/' +  address, callback)
-  }
+  } 
   
   getTransactions(addresses:string[], callback:request.RequestCallback){
     var addrs = addresses.reduce((prev, cur) => {return cur + ',' + prev} )

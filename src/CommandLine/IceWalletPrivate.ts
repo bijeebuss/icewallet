@@ -1,4 +1,3 @@
-import readline = require('readline');
 import fs = require('fs');
 import PrivateWalletService from '../Services/PrivateWalletService'
 import {WalletInfo} from '../Models/WalletInfo'
@@ -10,47 +9,61 @@ export default class IceWalletPrivate {
   wallet:PrivateWalletService;
 
   constructor(
-    public pathToWalletInfo, 
-    public pathToUnsignedTransaction, 
-    public pathToSignedTransaction,
-    newWallet:boolean) {
-      if(newWallet){
-        this.createNewWallet((err,wallet) => {
-          if(err){
-            return console.log(err);
+    public pathToWalletInfo:string, 
+    public pathToUnsignedTransaction:string, 
+    public pathToSignedTransaction:string,
+    newWallet:boolean,
+    callback?:(err,wallet:IceWalletPrivate) => void) {
+      
+      let done = (err,wallet:PrivateWalletService) => {
+        if(err && callback){
+            return callback(err,null);
           }
-          console.log('sucessfully created wallet');
-          this.wallet = wallet;
+        else if (err){
+          return console.log(err);
+        }
+        console.log('sucessfully loaded wallet');
+        this.wallet = wallet;
+        if(callback){
+          return callback(null, this);
+        }
+        else{
           this.displayMenu();
-        })
+        }
+      }
+      
+      if(newWallet){
+        this.createNewWallet(done)
       }
       else{
         console.log('loading and decryting wallet from ' + this.pathToWalletInfo)
-        this.loadWalletFromInfo('poop', pathToWalletInfo, (err,wallet) => {
-          if(err){
-            return console.log(err);
-          }
-          console.log('sucessfully loaded wallet');
-          this.wallet = wallet;
-          this.displayMenu();
-        })
+        this.loadWalletFromInfo(done);
       }
     }
 
-  loadWalletFromInfo(password:string, path:string, callback:(err,wallet:PrivateWalletService) => void){
-    console.log('loading and decrypting wallet, this might take a minute');
-    fs.readFile(path, 'hex', (err, data) => {
-      if (err){
-        return callback(err,null);
-      }
-      PrivateWalletService.openWallet(password, data, (err, info, wallet) => {
-        if(err == 'SEED_MISSING'){
-          return this.verifySeed(password, info, callback);
+  loadWalletFromInfo(callback:(err,wallet:PrivateWalletService) => void) {
+    inquirer.prompt({
+      name:'password',
+      type:'password',
+      message:'enter your password to open the wallet',
+    })
+    .then((answers) => {
+      let password = answers['password'].toString();
+      console.log('loading and decrypting wallet info from' + this.pathToWalletInfo);
+      console.log('this might take a minute');
+      fs.readFile(this.pathToWalletInfo, 'hex', (err, data) => {
+        if (err){
+          return callback(err,null);
         }
-        else if (err){
-          return callback(err, null);
-        }
-        return callback(err, wallet);
+        PrivateWalletService.openWallet(password, data, (err, info, wallet) => {
+          if(err == 'SEED_MISSING'){
+            return this.verifySeed(password, info, callback);
+          }
+          else if (err){
+            return callback(err, null);
+          }
+          return callback(err, wallet);
+        })
       })
     })
   }
@@ -58,8 +71,10 @@ export default class IceWalletPrivate {
   verifySeed(password:string, info:WalletInfo, callback:(err, wallet:PrivateWalletService) => void){
     inquirer.prompt([{
       name:'seed',
-      message:'the seed is not stored in the info please enter it now to open the wallet\n',
-    }], (answers) => {
+      message:'the seed is not stored in the info please enter it now to open the wallet',
+    }])
+    .then((answers) => {
+      console.log('verifying seed...')
       PrivateWalletService.seedWallet(password, info, answers['seed'].toString(), callback); 
     })
   }
@@ -69,13 +84,16 @@ export default class IceWalletPrivate {
       {
         name:'password1',
         type:'password',
+        message:'create a password',
         validate:(password) => {if(!password) return 'Password required'; else return true}
       },
       {
         name:'password2',
         type:'password',
+        message:'retype password',
         validate:(password) => {if(!password) return 'Password required'; else return true}
-      }], (passwords) => {
+      }])
+      .then((passwords) => {
         if(passwords['password1'] != passwords['password2']){
           return callback('Passwords dont match', null);
         }
@@ -88,27 +106,29 @@ export default class IceWalletPrivate {
           },
           {
             name:'exportSeed',
-            message:'Do you want to export the seed with the wallet info, (exports are always encrypted) y/n?',
+            message:'Do you want to export the seed with the wallet info, (exports are always encrypted)?',
             type:'confirm',
           },
           {
             name:'externalIndex',
-            message:'What is the starting external address index (default 0)',
+            message:'What is the starting external address index',
             default:0,
             validate:(externalIndex) => {if(!Number.isInteger(Number(externalIndex))) return 'Must be an integer'; else return true}
           },
           {
             name:'changeIndex',
-            message:'What is the starting change address index, (default 0)',
+            message:'What is the starting change address index',
             default:0,
             validate:(changeIndex) => {if(!Number.isInteger(Number(changeIndex))) return 'Must be an integer'; else return true}
           },
-        ],(answers) => {
+        ])
+        .then((answers) => {
           var info = new WalletInfo();
           info.seed = answers['seed'].toString();
           info.exportSeed = Boolean(answers['exportSeed']);
           info.nextUnusedAddresses.external = Number(answers['externalIndex']);
           info.nextUnusedAddresses.change = Number(answers['changeIndex']);
+          console.log('sucessfully created wallet');
           return callback(null, new PrivateWalletService(info, password.toString()));
         })
       })
@@ -120,26 +140,38 @@ export default class IceWalletPrivate {
       {
         name:'choice',
         type:'list',
+        message:'Choose an option',
         choices:choices,
       },
       {
         name:'fee',
         message:'enter your desired fee in satoshis',
-        when: (answers) => answers['Choice'] == choices[1],
+        when: (answers) => {
+          return answers['choice'] == choices[1]
+        },
         validate:(fee) => {if(!Number.isInteger(Number(fee))) return 'Must be an integer'; else return true}
-      }], 
-      (answers) => {
+      }])
+      .then((answers) => {
         let choice = answers['choice'];
         let fee = Number(answers['fee']);
-
-        if(choice == choices[0]){
-        this.deposit();
+        let done = (err) => {
+          if (err){
+            console.log(err);
+          }
+          this.displayMenu();
         }
-        else if(choice == choice[1]){
-          this.withdraw(fee);
+        
+        if(choice == choices[0]){
+        this.deposit(done);
+        }
+        else if(choice == choices[1]){
+          this.withdraw(fee, done);
         }
         else if(choice == choices[2]){
-          this.saveAndQuit();
+          this.saveAndQuit(done);
+        }
+        else{
+          this.displayMenu();
         }
       })
   }
@@ -153,16 +185,16 @@ export default class IceWalletPrivate {
     })
   }
 
-  deposit(){
+  deposit(callback:(err) => void){
     var newAddress = this.wallet.getDepositAddress();
     console.log('Send coins to:' + newAddress);
     inquirer.prompt(
       {
         name:'choice',
-        message:'Did the transaction complete? y/n',
+        message:'Did the transaction complete?',
         type:'confirm'
-      }, 
-      (answers) => {
+      })
+      .then((answers) => {
         if(answers['choice']){
           console.log('good')
           this.wallet.incrementExternalIndex();
@@ -170,7 +202,7 @@ export default class IceWalletPrivate {
         else if(answers['choice']){
           console.log('try again');
         }
-        this.displayMenu();
+        return callback(null);
     })
   }
 
@@ -183,65 +215,61 @@ export default class IceWalletPrivate {
 
     console.log('Fee:  '   + fee);
 
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-      });
-
-    rl.question('answer y/n\n', (answer) => {
-      if(answer == 'y'){
+    inquirer.prompt({
+      name:'complete',
+      type:'confirm',
+      message:'answer y/n',
+    })
+    .then((answers) => {
+      let complete:boolean = answers['complete'];
+      if(complete){
         return callback(null);
       }
-      else if(answer == 'n'){
+      else {
         return callback('Fix issues and try again');
-      }
-      else{
-        console.log('answer either "y" or "n"');
-        return callback('invalid answer');
       }
     });
   }
 
-  withdraw(fee:number){
+  withdraw(fee:number, callback:(err) => void){
     fs.readFile(this.pathToUnsignedTransaction,'utf8', (err, serialized) => {
       if(err){
-        throw err;
+        return callback(err);
       }
       var transactionInfo = this.wallet.parseTransaction(serialized);
 
       this.verifyTransaction(transactionInfo, fee, (err) => {
         if (err){
-          throw err;
+          return callback(err);
         }
         // add the fee, change script and sign it
         var signed = this.wallet.completeTransaction(serialized, fee);
         // export the signed transaction
-        fs.writeFile(this.pathToUnsignedTransaction, signed, (err) => {
+        fs.writeFile(this.pathToSignedTransaction, signed, (err) => {
           if(err){
-            throw err;
+            return callback(err);
           }
           // update the change index count
           this.wallet.incrementChangeIndex();
           console.log('transaction successfully signed and written to ' + this.pathToSignedTransaction);
-          this.displayMenu();
+          return callback(null);  
         })
       })
     })
   }
 
-  saveAndQuit(){
+  saveAndQuit(callback:(err) => void){
     console.log('encerypting and saving wallet to ' + this.pathToWalletInfo)
     this.wallet.exportInfo((err, encrypted) => {
       if(err){
-        console.log(err);
-        return this.displayMenu();
+        return callback(err);
       }
       this.saveInfo(encrypted, (err) => {
         if(err){
-          console.log(err);
-          return this.displayMenu();
+          return callback(err);
         }
         console.log('Sucessfully encrypted and saved info, goodbye');
+        return callback(null); 
       })
     });
   }

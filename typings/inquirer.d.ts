@@ -129,6 +129,7 @@ declare module "inquirer" {
                 fetchAnswer(question: Question): any;
                 setDefaultType(question: Question): any;
                 filterIfRunnable(question: Question): any;
+                then:any;
             }
 
             /**

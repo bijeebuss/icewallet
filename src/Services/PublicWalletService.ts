@@ -1,19 +1,30 @@
 var bitcore = require('bitcore-lib');
 import async = require('async');
-import {InsightService} from "../Services/InsightService"
-import * as BM from "../Models/BitcoreModels"
-import WalletService from './WalletService'
-import fs = require('fs');
+import {InsightService} from '../Services/InsightService';
+import * as BM from '../Models/BitcoreModels';
+import WalletService from './WalletService';
 
 class PublicWalletService extends WalletService {
-  insightService:InsightService = new InsightService('https://insight.bitpay.com/api/');
-  transactionExportPath:string = './data/initialTransaction.dat'
-  transactionImportPath:string = './data/signedTransaction.dat'
-  hdPublicKey:any;
-  transactions:BM.Transaction[] = [];
-  changeAddresses:BM.AddressInfo[] = [];
-  externalAddresses:BM.AddressInfo[] = [];
-  lastUpdated:Date = new Date();
+  insightService:InsightService;
+  transactionExportPath:string;
+  transactionImportPath:string;
+  transactions:BM.Transaction[];
+  changeAddresses:BM.AddressInfo[];
+  externalAddresses:BM.AddressInfo[];
+  lastUpdated:Date;
+
+  constructor(publicKey: string)
+  {
+    super(publicKey)
+    this.insightService = new InsightService('https://insight.bitpay.com/api/');
+    this.transactionExportPath = '/Users/Michael/unsignedTransaction.dat';
+    this.transactionImportPath = '/Users/Michael/signedTransaction.dat'; 
+    this.transactions = [];
+    this.changeAddresses= []; 
+    this.externalAddresses = [];
+    this.lastUpdated = new Date();
+  }
+  
 
   public get balance() : number {
     var changeBalance = 0;
@@ -125,7 +136,7 @@ class PublicWalletService extends WalletService {
     })
   }
 
-  createTransaction(to:string, amount:number, callback:(err,transaction) => void){
+  createTransaction(to:string, amount:number, callback:(err,serializedTransaction:string) => void){
     var addrs:string[] = [];
     var total:number = 0;
     var standardFee = 15000;
@@ -161,38 +172,14 @@ class PublicWalletService extends WalletService {
         .from(utxosForTransaction)  // Feed information about what unspent outputs one can use
         .to(to, amount)        // Add an output with the given amount of satoshis
 
-      return callback(null, transaction);
+      return callback(null, JSON.stringify(transaction.toObject()));
     })
   }
 
-  initiateTransaction(to:string, amount:number, callback:(err,transaction)=>void){
-    this.createTransaction(to,amount, (err, transaction) => {
-      if (err){
-        return callback(err,null);
-      }
-      fs.writeFile(this.transactionExportPath, JSON.stringify(transaction.toObject()), (err) => {
-        if(err){
-          return callback(err,transaction);
-        }
-        console.log('transaction written to ' + this.transactionExportPath);
-        console.log('sign the transaction offline then complete it');
-        return callback(null,transaction);
-      })
-    })
+  broadcastTransaction(serializedTransaction:string, callback:(err, txid) => void){
+    var transaction = new bitcore.Transaction(JSON.parse(serializedTransaction));
+    this.insightService.broadcastTransaction(transaction.serialize(),callback);
   }
-
-  broadcastTransaction(callback:(err, txid) => void){
-    fs.readFile(this.transactionImportPath, 'utf8', (err, data) => {
-      if (err){
-        return callback(err, null);
-      }
-      var transaction = new bitcore.Transaction(JSON.parse(data));
-      this.insightService.broadcastTransaction(transaction.serialize(),callback);
-    })
-  }
-
-
 }
 
-
-export {PublicWalletService};
+export {PublicWalletService}

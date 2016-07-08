@@ -1,5 +1,5 @@
 import program = require('commander');
-import IceWalletPrivate from './src/CommandLine/IceWalletPrivate'
+import IceWalletPrivate from './IceWalletPrivate'
 
 interface args {
   wallet:string
@@ -14,18 +14,18 @@ program
   .command('open')
   .description('open an existing wallet')
   .option('-w, --wallet <wallet>', 'relative path to load/save encryped wallet info', process.env.HOME + '/walletInfo.dat')
-  .option('-i, --input [input]', 'relative path to unsigned input transaction data', './data/unsignedTransaction.dat')
-  .option('-o, --output [output]', 'relative path to output signed transaction data', './data/signedTransaction.dat')
+  .option('-i, --input [input]', 'relative path to unsigned input transaction data', process.env.HOME + '/unsignedTransaction.dat')
+  .option('-o, --output [output]', 'relative path to output signed transaction data', process.env.HOME + '/signedTransaction.dat')
   .action(function (args:args){
     new IceWalletPrivate(args.wallet, args.input, args.output, false);
   });
 
 program
-  .command('new') 
+  .command('new')
   .description('create a new wallet')
   .option('-w, --wallet <wallet>', 'relative path to load/save encryped wallet info', process.env.HOME + '/walletInfo.dat')
-  .option('-i, --input [input]', 'relative path to unsigned input transaction data', './data/unsignedTransaction.dat')
-  .option('-o, --output [output]', 'relative path to output signed transaction data', './data/signedTransaction.dat')
+  .option('-i, --input [input]', 'relative path to unsigned input transaction data', process.env.HOME + '/unsignedTransaction.dat')
+  .option('-o, --output [output]', 'relative path to output signed transaction data', process.env.HOME + '/signedTransaction.dat')
   .action(function (args:args){
     new IceWalletPrivate(args.wallet, args.input, args.output, true);
   });
