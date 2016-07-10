@@ -26,7 +26,12 @@ class PublicWalletService extends WalletService {
       if (err){
         return callback(err,null,null);
       }
-      var wallet = new PublicWalletService(decrypted, password);
+      try {
+        var wallet = new PublicWalletService(decrypted, password);
+      }
+      catch(err){
+        return callback('Could not create wallet, check your xpub',decrypted,null);
+      }
       return callback(null, decrypted, wallet);
     });
   }

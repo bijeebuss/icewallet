@@ -28,12 +28,17 @@ export default class IceWalletPublic extends IceWallet {
         inquirer.prompt([
           {
             name:'xpub',
-            message:'Please type the BIP32 xub key for your wallet account',
+            message:'Enter the BIP32 xub key for your wallet account',
             default:null,
           },
         ])
         .then((answers) => {
-          let wallet = new PublicWalletService(answers['xpub'].toString(), password.toString());
+          try {
+            var wallet = new PublicWalletService(answers['xpub'].toString(), password.toString());
+          }
+          catch(err){
+            return callback('Could not create wallet, make sure you typed the xpub correctly',null)
+          }
           console.log('sucessfully created wallet');
           console.log("updating wallet...");
           wallet.update(callback);
@@ -84,14 +89,14 @@ export default class IceWalletPublic extends IceWallet {
         name:'address',
         message:'enter the address to send to',
         when: (answers) => {
-          return answers['choice'] == choices[0]
+          return answers['choice'] == choices.initiateWithdraw
         },
       },
       {
         name:'amount',
         message:'enter the amount to send in satoshis',
         when: (answers) => {
-          return answers['choice'] == choices[0]
+          return answers['choice'] == choices.initiateWithdraw
         },
         validate:(fee) => {if(!Number.isInteger(Number(fee))) return 'Must be an integer'; else return true}
       }])
