@@ -1,45 +1,12 @@
 import fs = require('fs');
-import PrivateWalletService from '../Services/PrivateWalletService'
-import {WalletInfo} from '../Models/WalletInfo'
-import TransactionInfo from '../Models/transactionInfo'
+import PrivateWalletService from '../Services/PrivateWalletService';
+import IceWallet from './IceWallet';
+import {WalletInfo} from '../Models/WalletInfo';
+import TransactionInfo from '../Models/transactionInfo';
 import inquirer = require('inquirer');
 
-export default class IceWalletPrivate {
-
+export default class IceWalletPrivate extends IceWallet {
   wallet:PrivateWalletService;
-
-  constructor(
-    public pathToWalletInfo:string, 
-    public pathToUnsignedTransaction:string, 
-    public pathToSignedTransaction:string,
-    newWallet:boolean,
-    callback?:(err,wallet:IceWalletPrivate) => void) {
-      
-      let done = (err,wallet:PrivateWalletService) => {
-        if(err && callback){
-            return callback(err,null);
-          }
-        else if (err){
-          return console.log(err);
-        }
-        console.log('sucessfully loaded wallet');
-        this.wallet = wallet;
-        if(callback){
-          return callback(null, this);
-        }
-        else{
-          this.displayMenu();
-        }
-      }
-      
-      if(newWallet){
-        this.createNewWallet(done)
-      }
-      else{
-        console.log('loading and decryting wallet from ' + this.pathToWalletInfo)
-        this.loadWalletFromInfo(done);
-      }
-    }
 
   loadWalletFromInfo(callback:(err,wallet:PrivateWalletService) => void) {
     inquirer.prompt({
@@ -135,13 +102,20 @@ export default class IceWalletPrivate {
   }
 
   displayMenu(){
-    var choices = ['Deposit', 'Withdraw', 'Save and Quit (dont quit any other way)' ]
+    var choices = {
+      deposit:'Deposit', 
+      withdraw:'Withdraw', 
+      showUsed:'Show Used Addresses', 
+      generateNewAddresses:'Generate New Addresses',      
+      saveAndQuit:'Save and Quit (dont quit any other way)' ,
+    }
+    let choicesList = [];
     inquirer.prompt([
       {
         name:'choice',
         type:'list',
         message:'Choose an option',
-        choices:choices,
+        choices: Object.keys(choices).map<string>((choice) => choices[choice])
       },
       {
         name:'fee',
@@ -161,28 +135,26 @@ export default class IceWalletPrivate {
           this.displayMenu();
         }
         
-        if(choice == choices[0]){
+        if(choice == choices.deposit){
         this.deposit(done);
         }
-        else if(choice == choices[1]){
+        else if(choice == choices.withdraw){
           this.withdraw(fee, done);
         }
-        else if(choice == choices[2]){
-          this.saveAndQuit(done);
+        else if(choice == choices.showUsed){
+          this.printAddresses();
+          done(null);
+        }
+        else if(choice == choices.generateNewAddresses){
+          this.generateNewAddresses(done);
+        }
+        else if(choice == choices.saveAndQuit){
+          this.saveAndQuit((err) => {});
         }
         else{
           this.displayMenu();
         }
       })
-  }
-
-  saveInfo(encrypted:string, callback:(err) => void){
-    fs.writeFile(this.pathToWalletInfo, new Buffer(encrypted,'hex'), (err) => {
-      if (err){
-        return callback(err);
-      }
-      return callback(null);
-    })
   }
 
   deposit(callback:(err) => void){
@@ -258,19 +230,41 @@ export default class IceWalletPrivate {
     })
   }
 
-  saveAndQuit(callback:(err) => void){
-    console.log('encerypting and saving wallet to ' + this.pathToWalletInfo)
-    this.wallet.exportInfo((err, encrypted) => {
-      if(err){
-        return callback(err);
-      }
-      this.saveInfo(encrypted, (err) => {
-        if(err){
-          return callback(err);
+  printAddresses(){
+    console.log('change: ');
+    this.wallet.addressRange(0, this.wallet.walletInfo.nextUnusedAddresses.change - 1, true).forEach((address) => {
+      console.log('\t' + address);
+    })
+    console.log('external: ');
+    this.wallet.addressRange(0, this.wallet.walletInfo.nextUnusedAddresses.external - 1, false).forEach((address) => {
+      console.log('\t' + address);
+    })
+  }
+
+  generateNewAddresses(callback:(err) => void){
+    inquirer.prompt([
+      {
+        name:'count',
+        message:'How many addresses?',
+        validate:(fee) => {if(!Number.isInteger(Number(fee))) return 'Must be an integer'; else return true}
+      },
+      {
+        name:'burn',
+        message:'Mark these as used? (may cause issues updating public wallet if you dont use them then deposit to this account again)',
+        type:'confirm',
+      }])
+      .then((answers) => {
+        let count = Number(answers['count']);
+        let burn = Boolean(answers['burn']);
+        let starting = this.wallet.walletInfo.nextUnusedAddresses.external;
+        let ending = starting + count - 1;
+        this.wallet.addressRange(starting, ending, false).forEach((address) => {
+          console.log(address);
+        })
+        if(burn){
+          this.wallet.walletInfo.nextUnusedAddresses.external += count;
         }
-        console.log('Sucessfully encrypted and saved info, goodbye');
-        return callback(null); 
-      })
-    });
+        callback(null);
+      }
   }
 }

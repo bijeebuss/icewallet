@@ -19,7 +19,7 @@ new IceWalletPrivate(
     var pubKey = privateWallet.accountHdPrivKey.hdPublicKey.toString()
     console.log(pubKey);
 
-    var publicWallet = new PublicWalletService(pubKey)
+    var publicWallet = new PublicWalletService(pubKey, privateWallet.password);
 
     publicWallet.update((err, wallet) => {
       if(err){

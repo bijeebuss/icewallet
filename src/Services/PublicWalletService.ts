@@ -6,25 +6,30 @@ import WalletService from './WalletService';
 
 class PublicWalletService extends WalletService {
   insightService:InsightService;
-  transactionExportPath:string;
-  transactionImportPath:string;
   transactions:BM.Transaction[];
   changeAddresses:BM.AddressInfo[];
   externalAddresses:BM.AddressInfo[];
   lastUpdated:Date;
 
-  constructor(publicKey: string)
+  constructor(publicKey: string, password:string)
   {
-    super(publicKey)
+    super(publicKey, password);
     this.insightService = new InsightService('https://insight.bitpay.com/api/');
-    this.transactionExportPath = '/Users/Michael/unsignedTransaction.dat';
-    this.transactionImportPath = '/Users/Michael/signedTransaction.dat'; 
     this.transactions = [];
     this.changeAddresses= []; 
     this.externalAddresses = [];
     this.lastUpdated = new Date();
   }
   
+  static openWallet(password:string, encryptedInfo:string, callback:(err, info:string, wallet:PublicWalletService) => void){
+    this.cryptoService.decrypt(password, encryptedInfo, (err, decrypted) => {
+      if (err){
+        return callback(err,null,null);
+      }
+      var wallet = new PublicWalletService(decrypted, password);
+      return callback(null, decrypted, wallet);
+    });
+  }
 
   public get balance() : number {
     var changeBalance = 0;
@@ -179,6 +184,18 @@ class PublicWalletService extends WalletService {
   broadcastTransaction(serializedTransaction:string, callback:(err, txid) => void){
     var transaction = new bitcore.Transaction(JSON.parse(serializedTransaction));
     this.insightService.broadcastTransaction(transaction.serialize(),callback);
+  }
+
+  exportInfo(callback:(err, encryptedInfo:string) => void){
+    // derive the encryption key
+    PublicWalletService.cryptoService.deriveKey(this.password, (err,key) => {
+    if(err){
+      return callback(err,null);
+    }
+
+    let encrypted = PublicWalletService.cryptoService.encrypt(key, this.hdPublicKey.toString());
+    return callback(null, encrypted);
+    });
   }
 }
 

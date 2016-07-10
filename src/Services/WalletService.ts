@@ -1,10 +1,14 @@
 var bitcore = require('bitcore-lib');
+import CryptoService from '../Services/CryptoService'
 
-export default class WalletService {
+abstract class WalletService {
   hdPublicKey:any;
+  password:string;
+  static cryptoService = new CryptoService();
   
-  constructor(publicKey: string){
+  constructor(publicKey: string, password:string){
     this.hdPublicKey = new bitcore.HDPublicKey(publicKey);
+    this.password = password;
   }
   
   // returns an address of the given index
@@ -20,4 +24,8 @@ export default class WalletService {
     }
     return addresses;
   }
+
+  abstract exportInfo(callback:(err, encryptedInfo:string) => void);
 }
+
+export default WalletService;

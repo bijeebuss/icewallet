@@ -17,7 +17,7 @@ program
   .option('-o, --output [output]', 'relative path to unsigned input transaction data', process.env.HOME + '/unsignedTransaction.dat')
   .option('-i, --input [input]', 'relative path to output signed transaction data', process.env.HOME + '/signedTransaction.dat')
   .action(function (args:args){
-    new IceWalletPublic(args.wallet, args.input, args.output, false);
+    new IceWalletPublic(args.wallet, args.output, args.input, false);
   });
 
 program
@@ -27,7 +27,7 @@ program
   .option('-o, --output [output]', 'relative path to unsigned input transaction data', process.env.HOME + '/unsignedTransaction.dat')
   .option('-i, --input [input]', 'relative path to output signed transaction data', process.env.HOME + '/signedTransaction.dat')
   .action(function (args:args){
-    new IceWalletPublic(args.wallet, args.input, args.output, true);
+    new IceWalletPublic(args.wallet, args.output, args.input, true);
   });
 
 program.on('*', function() {

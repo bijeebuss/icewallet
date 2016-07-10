@@ -1,6 +1,6 @@
 var bitcore = require('bitcore-lib');
 var Mnemonic = require('bitcore-mnemonic');
-import CryptoService from '../Services/CryptoService'
+
 
 import {WalletInfo} from '../Models/WalletInfo'
 import TransactionInfo from '../Models/TransactionInfo' 
@@ -10,10 +10,7 @@ import async = require('async');
 export default class PrivateWalletService extends WalletService {
   walletHdPrivKey : any;
   accountHdPrivKey: any;
-  password:string;
   walletInfo:WalletInfo;
-  
-  static cryptoService = new CryptoService();
 
   static openWallet(password:string, encryptedInfo:string, callback:(err, info:WalletInfo, wallet:PrivateWalletService) => void){
     this.cryptoService.decrypt(password, encryptedInfo, (err, decrypted) => {
@@ -52,11 +49,10 @@ export default class PrivateWalletService extends WalletService {
     }
     let walletHdPrivKey = (new Mnemonic(walletInfo.seed)).toHDPrivateKey();
     let accountHdPrivKey = walletHdPrivKey.derive("m/44'/0'/0'");
-    super(accountHdPrivKey.hdPublicKey.toString());
+    super(accountHdPrivKey.hdPublicKey.toString(), password);
     this.walletHdPrivKey = walletHdPrivKey;
     this.accountHdPrivKey = accountHdPrivKey;
     this.walletInfo = walletInfo;
-    this.password = password;
   }
 
   hdPrivateKey(index:number, change:boolean):any{
@@ -140,9 +136,12 @@ export default class PrivateWalletService extends WalletService {
     var externalPrivateKeys = this.privateKeyRange(0, indexes.external - 1, false);
 
     transaction
+      //.addData('Test')
+      //.addData('Michael Welnick IceWallet 12.5 Halving!')
       .change(this.address(indexes.change, true))
       .fee(fee)
       .sign(externalPrivateKeys.concat(changePrivateKeys));
+
 
     // this performs some checks
     transaction.serialize();
