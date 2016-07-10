@@ -265,6 +265,6 @@ export default class IceWalletPrivate extends IceWallet {
           this.wallet.walletInfo.nextUnusedAddresses.external += count;
         }
         callback(null);
-      }
+      })
   }
 }
