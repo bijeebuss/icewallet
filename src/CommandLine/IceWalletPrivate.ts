@@ -107,6 +107,7 @@ export default class IceWalletPrivate extends IceWallet {
       withdraw:'Withdraw', 
       showUsed:'Show Used Addresses', 
       generateNewAddresses:'Generate New Addresses',      
+      changeUsedAddresses:'Update Used Address Indexes',
       saveAndQuit:'Save and Quit (dont quit any other way)' ,
     }
     let choicesList = [];
@@ -121,7 +122,7 @@ export default class IceWalletPrivate extends IceWallet {
         name:'fee',
         message:'enter your desired fee in satoshis',
         when: (answers) => {
-          return answers['choice'] == choices[1]
+          return answers['choice'] == choices.withdraw
         },
         validate:(fee) => {if(!Number.isInteger(Number(fee))) return 'Must be an integer'; else return true}
       }])
@@ -134,25 +135,28 @@ export default class IceWalletPrivate extends IceWallet {
           }
           this.displayMenu();
         }
-        
-        if(choice == choices.deposit){
-        this.deposit(done);
-        }
-        else if(choice == choices.withdraw){
-          this.withdraw(fee, done);
-        }
-        else if(choice == choices.showUsed){
-          this.printAddresses();
-          done(null);
-        }
-        else if(choice == choices.generateNewAddresses){
-          this.generateNewAddresses(done);
-        }
-        else if(choice == choices.saveAndQuit){
-          this.saveAndQuit((err) => {});
-        }
-        else{
-          this.displayMenu();
+        switch(choice){
+          case choices.deposit: 
+            this.deposit(done);
+            break;
+          case choices.withdraw:
+            this.withdraw(fee, done);
+            break;
+          case choices.showUsed:
+            this.printAddresses();
+            done(null);
+            break;
+          case choices.generateNewAddresses:
+            this.generateNewAddresses(done);
+            break;  
+          case choices.changeUsedAddresses:
+            this.changeUsedAddresses(done);
+            break;
+          case choices.saveAndQuit:
+            this.saveAndQuit((err) => {});
+            break;
+          default:
+            this.displayMenu();
         }
       })
   }
@@ -265,6 +269,28 @@ export default class IceWalletPrivate extends IceWallet {
           this.wallet.walletInfo.nextUnusedAddresses.external += count;
         }
         callback(null);
+      })
+  }
+  changeUsedAddresses(callback:(err) => void){
+    inquirer.prompt([
+      {
+        name:'externalIndex',
+        message:'How many external addresses have been used',
+        default:0,
+        validate:(externalIndex) => {if(!Number.isInteger(Number(externalIndex))) return 'Must be an integer'; else return true}
+      },
+      {
+        name:'changeIndex',
+        message:'How many change addresses have been used',
+        default:0,
+        validate:(changeIndex) => {if(!Number.isInteger(Number(changeIndex))) return 'Must be an integer'; else return true}
+      },
+      ])
+      .then((answers) => {
+        this.wallet.walletInfo.nextUnusedAddresses.external = Number(answers['externalIndex']);
+        this.wallet.walletInfo.nextUnusedAddresses.change = Number(answers['changeIndex']);
+        console.log('sucessfully updated wallet');
+        return callback(null); 
       })
   }
 }

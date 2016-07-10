@@ -67,13 +67,18 @@ export default class IceWalletPublic extends IceWallet {
   }
   
   displayMenu(){
-    var choices = ['Initiate Withdraw', 'Complete Withdraw','Show Balance', 'Save and Quit (dont quit any other way)' ]
+    var choices = {
+      initiateWithdraw:'Initiate Withdraw', 
+      completeWithdraw:'Complete Withdraw',
+      showBalace:'Show Balance', 
+      saveAndQuit:'Save and Quit (dont quit any other way)' 
+    }
     inquirer.prompt([
       {
         name:'choice',
         type:'list',
         message:'Choose an option',
-        choices:choices,
+        choices: Object.keys(choices).map<string>((choice) => choices[choice]),
       },
       {
         name:'address',
@@ -98,24 +103,24 @@ export default class IceWalletPublic extends IceWallet {
           }
           this.displayMenu();
         }
-        
-        if(choice == choices[0]){
-          let amount = Number(answers['amount']);
-          let toAddress = answers['address'].toString();
-          this.initiateWithdraw(toAddress, amount, done);
-        }
-        else if(choice == choices[1]){
-          this.completeWithdraw(done);
-        }
-        else if(choice == choices[2]){
-          console.log("Balance in satoshis: " + this.wallet.balance);
-          this.displayMenu();
-        }
-        else if(choice == choices[3]){
-          this.saveAndQuit(done);
-        }
-        else{
-          this.displayMenu();
+        switch(choice){
+          case choices.initiateWithdraw: 
+            let amount = Number(answers['amount']);
+            let toAddress = answers['address'].toString();
+            this.initiateWithdraw(toAddress, amount, done);
+            break;
+          case choices.completeWithdraw:
+            this.completeWithdraw(done);
+            break;
+          case choices.showBalace:
+            console.log("Balance in satoshis: " + this.wallet.balance);
+            this.displayMenu();
+            break;
+          case choices.saveAndQuit:
+            this.saveAndQuit((err) => {});
+            break;
+          default:
+            this.displayMenu();
         }
       }
     )
