@@ -17,7 +17,12 @@ export default class PrivateWalletService extends WalletService {
       if (err){
         return callback(err,null,null);
       }
-      var walletInfo:WalletInfo = JSON.parse(decrypted);
+      try {
+        var walletInfo:WalletInfo = JSON.parse(decrypted);
+      }
+      catch(err){
+        return callback('cannot open wallet, make sure your password is correct',null,null)
+      }
       if(walletInfo.seed == null){
         return callback('SEED_MISSING', walletInfo, null);
       }

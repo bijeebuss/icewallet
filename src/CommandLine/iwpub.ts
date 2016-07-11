@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import program = require('commander');
 import IceWalletPublic from './IceWalletPublic'
 

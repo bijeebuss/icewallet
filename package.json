@@ -1,7 +1,7 @@
 {
   "name": "icewallet",
   "version": "1.0.0",
-  "description": "Cold storage enabled bitcoin wallet based on copay's bitcore",
+  "description": "Cold storage enabled command line bitcoin wallet based on copay's bitcore",
   "main": "index.js",
   "directories": {
     "test": "test"
@@ -29,11 +29,17 @@
     "bitcore-lib": "^0.13.16",
     "bitcore-mnemonic": "^1.1.1",
     "commander": "^2.9.0",
+    "inquirer": "^1.1.2",
+    "qrcode-terminal": "^0.10.0",
     "request": "^2.72.0",
     "scrypt": "^6.0.3"
   },
   "devDependencies": {
     "tsc": "^1.20150623.0",
     "typescript": "^1.8.10"
+  },
+  "bin": {
+    "iwpriv": "./bin/src/CommandLine/iwpriv.js",
+    "iwpub": "./bin/src/CommandLine/iwpub.js"
   }
 }

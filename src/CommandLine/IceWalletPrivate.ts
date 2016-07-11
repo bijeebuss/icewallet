@@ -1,4 +1,5 @@
 import fs = require('fs');
+let qrcode = require('qrcode-terminal');
 import PrivateWalletService from '../Services/PrivateWalletService';
 import IceWallet from './IceWallet';
 import {WalletInfo} from '../Models/WalletInfo';
@@ -95,8 +96,14 @@ export default class IceWalletPrivate extends IceWallet {
           info.exportSeed = Boolean(answers['exportSeed']);
           info.nextUnusedAddresses.external = Number(answers['externalIndex']);
           info.nextUnusedAddresses.change = Number(answers['changeIndex']);
+          try {
+            var wallet = new PrivateWalletService(info, password.toString());
+          }
+          catch (err){
+            return callback(err,null);
+          }
           console.log('sucessfully created wallet');
-          return callback(null, new PrivateWalletService(info, password.toString()));
+          return callback(null, wallet);
         })
       })
   }
@@ -106,7 +113,9 @@ export default class IceWalletPrivate extends IceWallet {
       deposit:'Deposit', 
       withdraw:'Withdraw', 
       showUsed:'Show Used Addresses', 
-      generateNewAddresses:'Generate New Addresses',      
+      generateNewAddresses:'Generate New Addresses',
+      showSeed:'Show seed',
+      showXpub:'Show Account Public Key',
       changeUsedAddresses:'Update Used Address Indexes',
       saveAndQuit:'Save and Quit (dont quit any other way)' ,
     }
@@ -127,7 +136,7 @@ export default class IceWalletPrivate extends IceWallet {
         validate:(fee) => {if(!Number.isInteger(Number(fee))) return 'Must be an integer'; else return true}
       }])
       .then((answers) => {
-        let choice = answers['choice'];
+        let choice:string = answers['choice'];
         let fee = Number(answers['fee']);
         let done = (err) => {
           if (err){
@@ -143,7 +152,7 @@ export default class IceWalletPrivate extends IceWallet {
             this.withdraw(fee, done);
             break;
           case choices.showUsed:
-            this.printAddresses();
+            this.printAddresses();  
             done(null);
             break;
           case choices.generateNewAddresses:
@@ -151,6 +160,14 @@ export default class IceWalletPrivate extends IceWallet {
             break;  
           case choices.changeUsedAddresses:
             this.changeUsedAddresses(done);
+            break;
+          case choices.showSeed:  
+            console.log(this.wallet.walletInfo.seed);
+            done(null);
+            break;
+          case choices.showXpub:
+            console.log(this.wallet.hdPublicKey.toString());
+            this.displayMenu();
             break;
           case choices.saveAndQuit:
             this.saveAndQuit((err) => {});
@@ -164,6 +181,7 @@ export default class IceWalletPrivate extends IceWallet {
   deposit(callback:(err) => void){
     var newAddress = this.wallet.getDepositAddress();
     console.log('Send coins to:' + newAddress);
+    qrcode.generate(newAddress);
     inquirer.prompt(
       {
         name:'choice',
