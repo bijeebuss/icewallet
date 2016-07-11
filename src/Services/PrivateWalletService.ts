@@ -141,13 +141,9 @@ export default class PrivateWalletService extends WalletService {
     var externalPrivateKeys = this.privateKeyRange(0, indexes.external - 1, false);
 
     transaction
-      //.addData('Test')
-      //.addData('Michael Welnick IceWallet 12.5 Halving!')
       .change(this.address(indexes.change, true))
       .fee(fee)
       .sign(externalPrivateKeys.concat(changePrivateKeys));
-
-
     // this performs some checks
     transaction.serialize();
 

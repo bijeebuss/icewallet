@@ -14,7 +14,7 @@ new IceWalletPrivate(
   (err,iceWallet) => {
     if(err){
       throw err;
-    }   
+    }
     var privateWallet = iceWallet.wallet;
     var pubKey = privateWallet.accountHdPrivKey.hdPublicKey.toString()
     console.log(pubKey);
