@@ -142,7 +142,9 @@ export default class IceWalletPrivate extends IceWallet {
           if (err){
             console.log(err);
           }
-          this.displayMenu();
+          if (choice != choices.saveAndQuit){
+            this.displayMenu();
+          }
         }
         switch(choice){
           case choices.deposit: 
@@ -170,7 +172,7 @@ export default class IceWalletPrivate extends IceWallet {
             this.displayMenu();
             break;
           case choices.saveAndQuit:
-            this.saveAndQuit((err) => {});
+            this.saveAndQuit(done);
             break;
           default:
             this.displayMenu();
@@ -226,30 +228,56 @@ export default class IceWalletPrivate extends IceWallet {
   }
 
   withdraw(fee:number, callback:(err) => void){
-    fs.readFile(this.pathToUnsignedTransaction,'utf8', (err, serialized) => {
-      if(err){
-        return callback(err);
-      }
-      var transactionInfo = this.wallet.parseTransaction(serialized);
-
-      this.verifyTransaction(transactionInfo, fee, (err) => {
-        if (err){
-          return callback(err);
+    inquirer.prompt([
+      {
+        name:'import',
+        message:'type the import path (path to unsigned transaction)',
+        when: (answers) => {
+          return (!this.pathToUnsignedTransaction)
+        },
+        filter:(answer) => {
+          this.pathToUnsignedTransaction = answer;
+          return answer;
         }
-        // add the fee, change script and sign it
-        var signed = this.wallet.completeTransaction(serialized, fee);
-        // export the signed transaction
-        fs.writeFile(this.pathToSignedTransaction, signed, (err) => {
+      },
+      {
+        name:'export',
+        message:'type the export path',
+        when: (answers) => {
+          return (!this.pathToSignedTransaction)
+        },
+        filter:(answer) => {
+          this.pathToSignedTransaction = answer
+          return answer;
+        }
+      }])
+      .then((answers) => {
+        fs.readFile(this.pathToUnsignedTransaction,'utf8', (err, serialized) => {
           if(err){
             return callback(err);
           }
-          // update the change index count
-          this.wallet.incrementChangeIndex();
-          console.log('transaction successfully signed and written to ' + this.pathToSignedTransaction);
-          return callback(null);  
+          var transactionInfo = this.wallet.parseTransaction(serialized);
+
+          this.verifyTransaction(transactionInfo, fee, (err) => {
+            if (err){
+              return callback(err);
+            }
+            // add the fee, change script and sign it
+            var signed = this.wallet.completeTransaction(serialized, fee);
+            // export the signed transaction
+            fs.writeFile(this.pathToSignedTransaction, signed, (err) => {
+              if(err){
+                return callback(err);
+              }
+              // update the change index count
+              this.wallet.incrementChangeIndex();
+              console.log('transaction successfully signed and written to ' + this.pathToSignedTransaction);
+              return callback(null);  
+            })
+          })
         })
-      })
-    })
+      }
+    )
   }
 
   printAddresses(){

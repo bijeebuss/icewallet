@@ -14,20 +14,28 @@ program
 program
   .command('open')
   .description('open an existing wallet')
-  .option('-w, --wallet <wallet>', 'path to load/save encryped wallet info', process.env.HOME + '/walletInfo.dat')
-  .option('-o, --output [output]', 'path to unsigned input transaction data', process.env.HOME + '/unsignedTransaction.dat')
-  .option('-i, --input [input]', 'path to output signed transaction data', process.env.HOME + '/signedTransaction.dat')
+  .option('-w, --wallet <wallet>', 'path to load/save encryped wallet info', process.env.HOME + '/walletPub.dat')
+  .option('-o, --output [output]', 'path to unsigned input transaction data')
+  .option('-i, --input [input]', 'path to output signed transaction data')
   .action(function (args:args){
+    if (!args.wallet){
+      console.log('Unknown Command: ' + program.args.join(' '));
+      return program.help();
+    }
     new IceWalletPublic(args.wallet, args.output, args.input, false);
   });
 
 program
   .command('new')
-  .description('create a new wallet')
-  .option('-w, --wallet <wallet>', 'path to load/save encryped wallet info', process.env.HOME + '/walletInfo.dat')
-  .option('-o, --output [output]', 'path to unsigned input transaction data', process.env.HOME + '/unsignedTransaction.dat')
-  .option('-i, --input [input]', 'path to output signed transaction data', process.env.HOME + '/signedTransaction.dat')
+  .description('create a new wallet') 
+  .option('-w, --wallet <wallet>', 'path to load/save encryped wallet info', process.env.HOME + '/walletPub.dat')
+  .option('-o, --output [output]', 'path to unsigned input transaction data')
+  .option('-i, --input [input]', 'path to output signed transaction data')
   .action(function (args:args){
+    if (!args.wallet){
+      console.log('Unknown Command: ' + program.args.join(' '));
+      return program.help();
+    }
     new IceWalletPublic(args.wallet, args.output, args.input, true);
   });
 

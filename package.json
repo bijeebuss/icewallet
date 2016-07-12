@@ -1,7 +1,7 @@
 {
   "name": "icewallet",
-  "version": "1.0.1",
-  "description": "Cold storage enabled command line bitcoin wallet based on copay's bitcore",
+  "version": "1.0.2",
+  "description": "Cold storage enabled command line bitcoin wallet based on bitpay's bitcore",
   "main": "index.js",
   "directories": {
     "test": "test"

@@ -84,21 +84,6 @@ export default class IceWalletPublic extends IceWallet {
         type:'list',
         message:'Choose an option',
         choices: Object.keys(choices).map<string>((choice) => choices[choice]),
-      },
-      {
-        name:'address',
-        message:'enter the address to send to',
-        when: (answers) => {
-          return answers['choice'] == choices.initiateWithdraw
-        },
-      },
-      {
-        name:'amount',
-        message:'enter the amount to send in satoshis',
-        when: (answers) => {
-          return answers['choice'] == choices.initiateWithdraw
-        },
-        validate:(fee) => {if(!Number.isInteger(Number(fee))) return 'Must be an integer'; else return true}
       }])
       .then((answers) => {
         let choice = answers['choice'];
@@ -106,13 +91,13 @@ export default class IceWalletPublic extends IceWallet {
           if (err){
             console.log(err);
           }
-          this.displayMenu();
+          if (choice != choices.saveAndQuit){
+            this.displayMenu();
+          }
         }
         switch(choice){
           case choices.initiateWithdraw: 
-            let amount = Number(answers['amount']);
-            let toAddress = answers['address'].toString();
-            this.initiateWithdraw(toAddress, amount, done);
+            this.initiateWithdraw(done);
             break;
           case choices.completeWithdraw:
             this.completeWithdraw(done);
@@ -122,7 +107,7 @@ export default class IceWalletPublic extends IceWallet {
             this.displayMenu();
             break;
           case choices.saveAndQuit:
-            this.saveAndQuit((err) => {});
+            this.saveAndQuit(done);
             break;
           default:
             this.displayMenu();
@@ -131,27 +116,69 @@ export default class IceWalletPublic extends IceWallet {
     )
   }
 
-  initiateWithdraw(to:string, amount:number, callback:(err) => void){
-    this.wallet.createTransaction(to, amount, (err, serialized) => {
-      fs.writeFile(this.pathToUnsignedTransaction, serialized, (err) => {
-        if(err){
-          return callback(err);
+  initiateWithdraw(callback:(err) => void){
+     inquirer.prompt([
+      {
+        name:'export',
+        message:'type the export path',
+        when: (answers) => {
+          return (!this.pathToUnsignedTransaction)
+        },
+        filter:(answer) => {
+          this.pathToUnsignedTransaction = answer;
+          return answer;
         }
-        console.log('transaction written to ' + this.pathToUnsignedTransaction);
-        console.log('sign the transaction offline then complete it');
-        return callback(null);
+      },
+      {
+        name:'address',
+        message:'enter the address to send to',
+      },
+      {
+        name:'amount',
+        message:'enter the amount to send in satoshis',
+        validate:(fee) => {if(!Number.isInteger(Number(fee))) return 'Must be an integer'; else return true}
+      }])
+      .then((answers) => {
+        let to = answers['address'];
+        let amount = Number(answers['amount']);
+        this.wallet.createTransaction(to, amount, (err, serialized) => {
+          if(err){
+            return callback(err);
+          }
+          fs.writeFile(this.pathToUnsignedTransaction, serialized, (err) => {
+            if(err){
+              return callback(err);
+            }
+            console.log('transaction written to ' + this.pathToUnsignedTransaction);
+            console.log('sign the transaction offline then complete it');
+            return callback(null);
+          })
       })
     })
   }
 
   completeWithdraw(callback:(err) => void){
-    fs.readFile(this.pathToSignedTransaction, 'utf8', (err, data) => {
-      if (err){
-        return callback(err);
-      }
-      this.wallet.broadcastTransaction(data, (err, txid) => {
-        console.log('transaction successfully broadcasted with txid: ' + txid);
-        return callback(null)
+    inquirer.prompt([
+      {
+        name:'import',
+        message:'type the import path (path to signed transaction)',
+        when: (answers) => {
+          return (!this.pathToSignedTransaction)
+        },
+        filter:(answer) => {
+          this.pathToSignedTransaction = answer;
+          return answer;
+        }
+      }])
+      .then((answers) => {
+        fs.readFile(this.pathToSignedTransaction, 'utf8', (err, data) => {
+          if (err){
+            return callback(err);
+          }
+          this.wallet.broadcastTransaction(data, (err, txid) => {
+          console.log('transaction successfully broadcasted with txid: ' + txid);
+          return callback(null)
+        })
       })
     })
   }
