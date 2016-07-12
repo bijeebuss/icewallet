@@ -1,7 +1,7 @@
 # IceWallet
 Cold storage enabled command line bitcoin wallet based on [bitpay's bitcore](https://github.com/bitpay/bitcore-lib)
 ##Setup
-To use as a cold storage wallet you will need to be familiarity with the command line and two computers (if you just want to try it out skip to usage)
+To use as a cold storage wallet you will familiarity with the command line and two computers (if you just want to try it out skip to usage)
 
 1. Your main computer
 2. A small inexpensive computer, preferably with no wifi, such as raspberry pi zero
