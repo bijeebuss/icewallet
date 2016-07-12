@@ -14,7 +14,7 @@ program
 program
   .command('open')
   .description('open an existing wallet')
-  .option('-w, --wallet <wallet>', 'path to load/save encryped wallet info', process.env.HOME + '/walletPub.dat')
+  .option('-w, --wallet <wallet>', 'path to load/save encryped wallet info', 'walletPub.dat')
   .option('-o, --output [output]', 'path to unsigned input transaction data')
   .option('-i, --input [input]', 'path to output signed transaction data')
   .action(function (args:args){
@@ -27,8 +27,8 @@ program
 
 program
   .command('new')
-  .description('create a new wallet') 
-  .option('-w, --wallet <wallet>', 'path to load/save encryped wallet info', process.env.HOME + '/walletPub.dat')
+  .description('create a new wallet')
+  .option('-w, --wallet <wallet>', 'path to load/save encryped wallet info', 'walletPub.dat')
   .option('-o, --output [output]', 'path to unsigned input transaction data')
   .option('-i, --input [input]', 'path to output signed transaction data')
   .action(function (args:args){
