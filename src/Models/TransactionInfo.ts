@@ -1,6 +1,6 @@
 export default class TransactionInfo {
-  feeBTC:number;
-  outputsBTC:Outputs;
+  fee:number;
+  outputTotals:Outputs;
 }
 
 interface Outputs {

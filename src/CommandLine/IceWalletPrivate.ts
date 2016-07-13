@@ -204,8 +204,8 @@ export default class IceWalletPrivate extends IceWallet {
 
   verifyTransaction(transaction:TransactionInfo, fee, callback:(err) => void){
     console.log('Please verify this transaction');
-    for(let address in transaction.outputsBTC){
-      console.log('Send: '   + transaction.outputsBTC[address]);
+    for(let address in transaction.outputTotals){
+      console.log('Send: '   + transaction.outputTotals[address]);
       console.log('To:   '   + address);
     }
 

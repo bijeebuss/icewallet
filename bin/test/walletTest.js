@@ -1,42 +1,34 @@
 "use strict";
 const PublicWalletService_1 = require('../src/Services/PublicWalletService');
-const IceWalletPrivate_1 = require('../src/CommandLine/IceWalletPrivate');
+const PrivateWalletService_1 = require('../src/Services/PrivateWalletService');
+const WalletInfo_1 = require('../src/Models/WalletInfo');
 var bitcore = require('bitcore-lib');
-var seed = 'scheme caution cabin snack squeeze busy lava duck bleak cement medal endless';
-new IceWalletPrivate_1.default('/Users/Michael/iceWallets/old.dat', process.env.HOME + '/unsignedTransaction.dat', process.env.HOME + '/signedTransaction.dat', false, (err, iceWallet) => {
+var walletInfo = new WalletInfo_1.WalletInfo();
+walletInfo.seed = 'scheme caution cabin snack squeeze busy lava duck bleak cement medal endless';
+walletInfo.exportSeed = true;
+walletInfo.nextUnusedAddresses.external = 20;
+walletInfo.nextUnusedAddresses.change = 20;
+var privateWallet = new PrivateWalletService_1.default(walletInfo, 'secret');
+var pubKey = privateWallet.hdPublicKey.toString();
+console.log(pubKey);
+var publicWallet = new PublicWalletService_1.PublicWalletService(pubKey, privateWallet.password);
+publicWallet.update((err, wallet) => {
     if (err) {
-        throw err;
+        console.log(err);
     }
-    var privateWallet = iceWallet.wallet;
-    var pubKey = privateWallet.accountHdPrivKey.hdPublicKey.toString();
-    console.log(pubKey);
-    var publicWallet = new PublicWalletService_1.PublicWalletService(pubKey, privateWallet.password);
-    publicWallet.update((err, wallet) => {
+    console.log('Confirmed Balance: ' + wallet.balance);
+    wallet.createTransaction('1BbRFw5nvkZDRK56qtCvcy1yFR3Q2nWPgf', 1000, (err, transaction) => {
         if (err) {
-            console.log(err);
+            throw err;
         }
-        console.log('Confirmed Balance: ' + wallet.balance);
-        wallet.initiateTransaction('1NeQmcmKN3NqXGbe88rk15gwDHiBK6YMce', 1970000, (err, transaction) => {
+        var signedTransaction = privateWallet.completeTransaction(transaction, 15000);
+        wallet.broadcastTransaction(signedTransaction, (err, txid) => {
             if (err) {
-                throw err;
+                return console.log(err);
             }
-            iceWallet.withdraw(12000, (err) => {
-                if (err) {
-                    return console.log(err);
-                }
-                wallet.broadcastTransaction((err, txid) => {
-                    if (err) {
-                        return console.log(err);
-                    }
-                    console.log('transaction broadcasted with txid: ' + txid);
-                    iceWallet.deposit((err) => {
-                        if (err) {
-                            console.log(err);
-                        }
-                    });
-                });
-            });
+            console.log('transaction broadcasted with txid: ' + txid);
+            privateWallet.incrementExternalIndex();
         });
     });
 });
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoid2FsbGV0VGVzdC5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uL3Rlc3Qvd2FsbGV0VGVzdC50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiO0FBQ0Esc0NBQWtDLHFDQUFxQyxDQUFDLENBQUE7QUFFeEUsbUNBQTZCLHFDQUFxQyxDQUFDLENBQUE7QUFDbkUsSUFBSSxPQUFPLEdBQUcsT0FBTyxDQUFDLGFBQWEsQ0FBQyxDQUFDO0FBRXJDLElBQUksSUFBSSxHQUFHLDhFQUE4RSxDQUFDO0FBRTFGLElBQUksMEJBQWdCLENBQ2xCLG1DQUFtQyxFQUNuQyxPQUFPLENBQUMsR0FBRyxDQUFDLElBQUksR0FBRywwQkFBMEIsRUFDN0MsT0FBTyxDQUFDLEdBQUcsQ0FBQyxJQUFJLEdBQUcsd0JBQXdCLEVBQzNDLEtBQUssRUFDTCxDQUFDLEdBQUcsRUFBQyxTQUFTO0lBQ1osRUFBRSxDQUFBLENBQUMsR0FBRyxDQUFDLENBQUEsQ0FBQztRQUNOLE1BQU0sR0FBRyxDQUFDO0lBQ1osQ0FBQztJQUNELElBQUksYUFBYSxHQUFHLFNBQVMsQ0FBQyxNQUFNLENBQUM7SUFDckMsSUFBSSxNQUFNLEdBQUcsYUFBYSxDQUFDLGdCQUFnQixDQUFDLFdBQVcsQ0FBQyxRQUFRLEVBQUUsQ0FBQTtJQUNsRSxPQUFPLENBQUMsR0FBRyxDQUFDLE1BQU0sQ0FBQyxDQUFDO0lBRXBCLElBQUksWUFBWSxHQUFHLElBQUkseUNBQW1CLENBQUMsTUFBTSxFQUFFLGFBQWEsQ0FBQyxRQUFRLENBQUMsQ0FBQztJQUUzRSxZQUFZLENBQUMsTUFBTSxDQUFDLENBQUMsR0FBRyxFQUFFLE1BQU07UUFDOUIsRUFBRSxDQUFBLENBQUMsR0FBRyxDQUFDLENBQUEsQ0FBQztZQUNOLE9BQU8sQ0FBQyxHQUFHLENBQUMsR0FBRyxDQUFDLENBQUM7UUFDbkIsQ0FBQztRQUNELE9BQU8sQ0FBQyxHQUFHLENBQUMscUJBQXFCLEdBQUcsTUFBTSxDQUFDLE9BQU8sQ0FBQyxDQUFDO1FBRXBELE1BQU0sQ0FBQyxtQkFBbUIsQ0FDeEIsb0NBQW9DLEVBQ3BDLE9BQU8sRUFDUCxDQUFDLEdBQUcsRUFBQyxXQUFXO1lBQ2QsRUFBRSxDQUFBLENBQUMsR0FBRyxDQUFDLENBQUEsQ0FBQztnQkFDTixNQUFNLEdBQUcsQ0FBQztZQUNaLENBQUM7WUFDRCxTQUFTLENBQUMsUUFBUSxDQUFDLEtBQUssRUFBRSxDQUFDLEdBQUc7Z0JBQzVCLEVBQUUsQ0FBQyxDQUFDLEdBQUcsQ0FBQyxDQUFBLENBQUM7b0JBQ1AsTUFBTSxDQUFDLE9BQU8sQ0FBQyxHQUFHLENBQUMsR0FBRyxDQUFDLENBQUM7Z0JBQzFCLENBQUM7Z0JBQ0QsTUFBTSxDQUFDLG9CQUFvQixDQUFDLENBQUMsR0FBRyxFQUFFLElBQUk7b0JBQ3BDLEVBQUUsQ0FBQyxDQUFDLEdBQUcsQ0FBQyxDQUFBLENBQUM7d0JBQ1AsTUFBTSxDQUFDLE9BQU8sQ0FBQyxHQUFHLENBQUMsR0FBRyxDQUFDLENBQUE7b0JBQ3pCLENBQUM7b0JBQ0QsT0FBTyxDQUFDLEdBQUcsQ0FBQyxxQ0FBcUMsR0FBRyxJQUFJLENBQUMsQ0FBQztvQkFFMUQsU0FBUyxDQUFDLE9BQU8sQ0FBQyxDQUFDLEdBQUc7d0JBQ3BCLEVBQUUsQ0FBQSxDQUFDLEdBQUcsQ0FBQyxDQUFBLENBQUM7NEJBQ04sT0FBTyxDQUFDLEdBQUcsQ0FBQyxHQUFHLENBQUMsQ0FBQzt3QkFDbkIsQ0FBQztvQkFDSCxDQUFDLENBQUMsQ0FBQztnQkFDTCxDQUFDLENBQUMsQ0FBQTtZQUNKLENBQUMsQ0FBQyxDQUFBO1FBQ0osQ0FBQyxDQUNGLENBQUM7SUFDSixDQUFDLENBQUMsQ0FBQTtBQUNKLENBQUMsQ0FDRixDQUFBIn0=
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoid2FsbGV0VGVzdC5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uL3Rlc3Qvd2FsbGV0VGVzdC50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiO0FBQ0Esc0NBQWtDLHFDQUFxQyxDQUFDLENBQUE7QUFDeEUsdUNBQWlDLHNDQUFzQyxDQUFDLENBQUE7QUFDeEUsNkJBQXlCLDBCQUN6QixDQUFDLENBRGtEO0FBQ25ELElBQUksT0FBTyxHQUFHLE9BQU8sQ0FBQyxhQUFhLENBQUMsQ0FBQztBQUVyQyxJQUFJLFVBQVUsR0FBRyxJQUFJLHVCQUFVLEVBQUUsQ0FBQTtBQUNqQyxVQUFVLENBQUMsSUFBSSxHQUFHLDhFQUE4RSxDQUFDO0FBQ2pHLFVBQVUsQ0FBQyxVQUFVLEdBQUcsSUFBSSxDQUFDO0FBQzdCLFVBQVUsQ0FBQyxtQkFBbUIsQ0FBQyxRQUFRLEdBQUcsRUFBRSxDQUFDO0FBQzdDLFVBQVUsQ0FBQyxtQkFBbUIsQ0FBQyxNQUFNLEdBQUcsRUFBRSxDQUFDO0FBQzNDLElBQUksYUFBYSxHQUFHLElBQUksOEJBQW9CLENBQUMsVUFBVSxFQUFDLFFBQVEsQ0FBQyxDQUFDO0FBQ2xFLElBQUksTUFBTSxHQUFHLGFBQWEsQ0FBQyxXQUFXLENBQUMsUUFBUSxFQUFFLENBQUM7QUFDbEQsT0FBTyxDQUFDLEdBQUcsQ0FBQyxNQUFNLENBQUMsQ0FBQztBQUVwQixJQUFJLFlBQVksR0FBRyxJQUFJLHlDQUFtQixDQUFDLE1BQU0sRUFBRSxhQUFhLENBQUMsUUFBUSxDQUFDLENBQUM7QUFFM0UsWUFBWSxDQUFDLE1BQU0sQ0FBQyxDQUFDLEdBQUcsRUFBRSxNQUFNO0lBQzlCLEVBQUUsQ0FBQSxDQUFDLEdBQUcsQ0FBQyxDQUFBLENBQUM7UUFDTixPQUFPLENBQUMsR0FBRyxDQUFDLEdBQUcsQ0FBQyxDQUFDO0lBQ25CLENBQUM7SUFDRCxPQUFPLENBQUMsR0FBRyxDQUFDLHFCQUFxQixHQUFHLE1BQU0sQ0FBQyxPQUFPLENBQUMsQ0FBQztJQUVwRCxNQUFNLENBQUMsaUJBQWlCLENBQ3RCLG9DQUFvQyxFQUNwQyxJQUFJLEVBQ0osQ0FBQyxHQUFHLEVBQUMsV0FBVztRQUNkLEVBQUUsQ0FBQSxDQUFDLEdBQUcsQ0FBQyxDQUFBLENBQUM7WUFDTixNQUFNLEdBQUcsQ0FBQztRQUNaLENBQUM7UUFDRCxJQUFJLGlCQUFpQixHQUFHLGFBQWEsQ0FBQyxtQkFBbUIsQ0FBQyxXQUFXLEVBQUUsS0FBSyxDQUFDLENBQUM7UUFFOUUsTUFBTSxDQUFDLG9CQUFvQixDQUFDLGlCQUFpQixFQUFFLENBQUMsR0FBRyxFQUFFLElBQUk7WUFDdkQsRUFBRSxDQUFDLENBQUMsR0FBRyxDQUFDLENBQUEsQ0FBQztnQkFDUCxNQUFNLENBQUMsT0FBTyxDQUFDLEdBQUcsQ0FBQyxHQUFHLENBQUMsQ0FBQTtZQUN6QixDQUFDO1lBQ0QsT0FBTyxDQUFDLEdBQUcsQ0FBQyxxQ0FBcUMsR0FBRyxJQUFJLENBQUMsQ0FBQztZQUMxRCxhQUFhLENBQUMsc0JBQXNCLEVBQUUsQ0FBQztRQUN6QyxDQUFDLENBQUMsQ0FBQztJQUNMLENBQUMsQ0FBQyxDQUFBO0FBQ04sQ0FBQyxDQUFDLENBQUEifQ==

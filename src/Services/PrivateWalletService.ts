@@ -127,9 +127,9 @@ export default class PrivateWalletService extends WalletService {
   parseTransaction(serializedTransaction:string):TransactionInfo{
     var transaction = new bitcore.Transaction(JSON.parse(serializedTransaction));
     var info = new TransactionInfo();
-    info.outputsBTC = {};
+    info.outputTotals = {};
     transaction.outputs.forEach((output) => {
-      info.outputsBTC[output._script.toAddress().toString()] = bitcore.Unit.fromSatoshis(output._satoshis).toBTC();
+      info.outputTotals[output._script.toAddress().toString()] = output._satoshis;
     })
     return info;
   }
