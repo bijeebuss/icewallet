@@ -1,5 +1,6 @@
 import fs = require('fs');
 let qrcode = require('qrcode-terminal');
+let unit = require('bitcore-lib').Unit;
 import PrivateWalletService from '../Services/PrivateWalletService';
 import IceWallet from './IceWallet';
 import {WalletInfo} from '../Models/WalletInfo';
@@ -129,7 +130,7 @@ export default class IceWalletPrivate extends IceWallet {
       },
       {
         name:'fee',
-        message:'enter your desired fee in satoshis',
+        message:'enter your desired fee in bits',
         when: (answers) => {
           return answers['choice'] == choices.withdraw
         },
@@ -137,7 +138,7 @@ export default class IceWalletPrivate extends IceWallet {
       }])
       .then((answers) => {
         let choice:string = answers['choice'];
-        let fee = Number(answers['fee']);
+        let fee = Number(unit.fromBits(answers['fee']).satoshis);
         let done = (err) => {
           if (err){
             console.log(err);
@@ -205,11 +206,11 @@ export default class IceWalletPrivate extends IceWallet {
   verifyTransaction(transaction:TransactionInfo, fee, callback:(err) => void){
     console.log('Please verify this transaction');
     for(let address in transaction.outputTotals){
-      console.log('Send: '   + transaction.outputTotals[address]);
+      console.log('Send: '   + unit.fromSatoshis(transaction.outputTotals[address]).bits + 'bits');
       console.log('To:   '   + address);
     }
 
-    console.log('Fee:  '   + fee);
+    console.log('Fee:  '   + unit.fromSatoshis(fee).bits + 'bits');
 
     inquirer.prompt({
       name:'complete',

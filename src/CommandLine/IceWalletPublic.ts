@@ -1,4 +1,5 @@
 import fs = require('fs');
+let unit = require('bitcore-lib').Unit;
 import inquirer = require('inquirer')
 import {PublicWalletService} from '../Services/PublicWalletService'
 import IceWallet from './IceWallet'
@@ -76,6 +77,7 @@ export default class IceWalletPublic extends IceWallet {
       initiateWithdraw:'Initiate Withdraw', 
       completeWithdraw:'Complete Withdraw',
       showBalace:'Show Balance', 
+      update:'Update',
       saveAndQuit:'Save and Quit (dont quit any other way)' 
     }
     inquirer.prompt([
@@ -103,11 +105,15 @@ export default class IceWalletPublic extends IceWallet {
             this.completeWithdraw(done);
             break;
           case choices.showBalace:
-            console.log("Balance in satoshis: " + this.wallet.balance);
+            console.log("Balance in bits: " + unit.fromSatoshis(this.wallet.balance).bits);
             this.displayMenu();
             break;
           case choices.saveAndQuit:
             this.saveAndQuit(done);
+            break;
+          case choices.update:
+            console.log('Updating Wallet...');
+            this.wallet.update((err,wallet) => done(err));
             break;
           default:
             this.displayMenu();
@@ -135,12 +141,12 @@ export default class IceWalletPublic extends IceWallet {
       },
       {
         name:'amount',
-        message:'enter the amount to send in satoshis',
-        validate:(fee) => {if(!Number.isInteger(Number(fee))) return 'Must be an integer'; else return true}
+        message:'enter the amount to send in bits',
+        validate: amount => {if(!Number.isInteger(Number(amount))) return 'Must be an integer'; else return true}
       }])
       .then((answers) => {
         let to = answers['address'];
-        let amount = Number(answers['amount']);
+        let amount = Number(unit.fromBits(answers['amount']).satoshis);
         this.wallet.createTransaction(to, amount, (err, serialized) => {
           if(err){
             return callback(err);
