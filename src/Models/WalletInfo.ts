@@ -1,18 +1,18 @@
 export class WalletInfo {
-  seed:string
-  exportSeed:boolean
-  seedHash:string
-  nextUnusedAddresses:AddressIndexes
-
+  accounts:Account[]
   constructor(){
-    this.nextUnusedAddresses = new AddressIndexes();
+    this.accounts = [];
   }
 }
 
-export class AddressIndexes {
-  change: number
-  external: number
+export class Account {
+  name:string
+  xpub:string
+  nextChangeIndex:number
+  nextExternalIndex:number
+  hdPublicKey:any;  
 }
+
 
 
 

@@ -2,23 +2,32 @@ var bitcore = require('bitcore-lib');
 var Mnemonic = require('bitcore-mnemonic');
 
 
-import {WalletInfo} from '../Models/WalletInfo'
+import {PrivateWalletInfo} from '../Models/PrivateWalletInfo'
 import TransactionInfo from '../Models/TransactionInfo' 
 import WalletService from './WalletService'
 import async = require('async');
 
 export default class PrivateWalletService extends WalletService {
   walletHdPrivKey : any;
-  accountHdPrivKey: any;
-  walletInfo:WalletInfo;
+  walletInfo:PrivateWalletInfo;
+  
+  get accountHdPrivKey():any {
+    return this.walletHdPrivKey.derive("m/44'/0'").derive(this.selectedAccountIndex,true);
+  }
+  get nextChangeIndex():number {
+      return this.walletInfo.accounts[this.selectedAccountIndex].nextChangeIndex;
+  }
+  get nextExternalIndex():number {
+      return this.walletInfo.accounts[this.selectedAccountIndex].nextExternalIndex;
+  }
 
-  static openWallet(password:string, encryptedInfo:string, callback:(err, info:WalletInfo, wallet:PrivateWalletService) => void){
+  static openWallet(password:string, encryptedInfo:string, callback:(err, info:PrivateWalletInfo, wallet:PrivateWalletService) => void){
     this.cryptoService.decrypt(password, encryptedInfo, (err, decrypted) => {
       if (err){
         return callback(err,null,null);
       }
       try {
-        var walletInfo:WalletInfo = JSON.parse(decrypted);
+        var walletInfo:PrivateWalletInfo = JSON.parse(decrypted);
       }
       catch(err){
         return callback('cannot open wallet, make sure your password is correct',null,null)
@@ -33,7 +42,7 @@ export default class PrivateWalletService extends WalletService {
     });
   }
 
-  static seedWallet(password:string, info:WalletInfo, seed:string, callback:(err,wallet:PrivateWalletService) => void){
+  static seedWallet(password:string, info:PrivateWalletInfo, seed:string, callback:(err,wallet:PrivateWalletService) => void){
     this.cryptoService.verifyHash(info.seedHash, seed, (err, matched) => {
       if (err){
         return callback (err, null)
@@ -48,16 +57,13 @@ export default class PrivateWalletService extends WalletService {
     });
   }
 
-  constructor(walletInfo:WalletInfo, password:string){
+  constructor(walletInfo:PrivateWalletInfo, password:string){
     if (!walletInfo.seed){
       walletInfo.seed = new Mnemonic().toString();
     }
     let walletHdPrivKey = (new Mnemonic(walletInfo.seed)).toHDPrivateKey();
-    let accountHdPrivKey = walletHdPrivKey.derive("m/44'/0'/0'");
-    super(accountHdPrivKey.hdPublicKey.toString(), password);
+    super(walletInfo, password);
     this.walletHdPrivKey = walletHdPrivKey;
-    this.accountHdPrivKey = accountHdPrivKey;
-    this.walletInfo = walletInfo;
   }
 
   hdPrivateKey(index:number, change:boolean):any{
