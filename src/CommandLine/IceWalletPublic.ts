@@ -2,12 +2,13 @@ import fs = require('fs');
 let unit = require('bitcore-lib').Unit;
 import inquirer = require('inquirer')
 import {PublicWalletService} from '../Services/PublicWalletService'
+import {PublicWalletInfo} from '../Models/PublicWalletInfo'
 import IceWallet from './IceWallet'
 
 export default class IceWalletPublic extends IceWallet {
   wallet:PublicWalletService;
   
-  createNewWallet(callback:(err,wallet:PublicWalletService) => void){
+  createNewWallet(callback:(err:any,wallet:PublicWalletService) => void){
     inquirer.prompt([
       {
         name:'password1',
@@ -21,7 +22,7 @@ export default class IceWalletPublic extends IceWallet {
         message:'retype password',
         validate:(password) => {if(!password) return 'Password required'; else return true}
       }])
-      .then((passwords) => {
+      .then((passwords:any) => {
         if(passwords['password1'] != passwords['password2']){
           return callback('Passwords dont match', null);
         }
@@ -33,9 +34,11 @@ export default class IceWalletPublic extends IceWallet {
             default:null,
           },
         ])
-        .then((answers) => {
+        .then((answers:any) => {
           try {
-            var wallet = new PublicWalletService(answers['xpub'].toString(), password.toString());
+            var info = new PublicWalletInfo();
+            info.addAccount(answers['xpub'].toString(), 'Default', 0, 0, 0);
+            var wallet = new PublicWalletService(info, password.toString());
           }
           catch(err){
             return callback('Could not create wallet, make sure you typed the xpub correctly',null)
@@ -47,13 +50,13 @@ export default class IceWalletPublic extends IceWallet {
       })
   }
 
-  loadWalletFromInfo(callback:(err,PublicWalletService) => void){
+  loadWalletFromInfo(callback:(err:any,PublicWalletService:PublicWalletService) => void){
     inquirer.prompt({
       name:'password',
       type:'password',
       message:'enter your password to open the wallet',
     })
-    .then((answers) => {
+    .then((answers:any) => {
       let password = answers['password'].toString();
       console.log('loading and decrypting wallet info from' + this.pathToWalletInfo);
       console.log('this might take a minute');
@@ -73,23 +76,27 @@ export default class IceWalletPublic extends IceWallet {
   }
   
   displayMenu(){
-    var choices = {
-      initiateWithdraw:'Initiate Withdraw', 
-      completeWithdraw:'Complete Withdraw',
-      showBalace:'Show Balance', 
-      update:'Update',
-      saveAndQuit:'Save and Quit (dont quit any other way)' 
+    class Choices {
+      [key: string]: string;
+      initiateWithdraw = 'Initiate Withdraw';
+      completeWithdraw = 'Complete Withdraw';
+      showBalace = 'Show Balance';
+      update = 'Update';
+      saveAndQuit = 'Save and Quit (dont quit any other way)';
     }
+
+    let choices = new Choices();
+    
     inquirer.prompt([
       {
         name:'choice',
         type:'list',
         message:'Choose an option',
-        choices: Object.keys(choices).map<string>((choice) => choices[choice]),
+        choices: Object.keys(choices).map<string>((choice) => choices[choice].toString()),
       }])
-      .then((answers) => {
+      .then((answers:any) => {
         let choice = answers['choice'];
-        let done = (err) => {
+        let done = (err:any) => {
           if (err){
             console.log(err);
           }
@@ -122,7 +129,7 @@ export default class IceWalletPublic extends IceWallet {
     )
   }
 
-  initiateWithdraw(callback:(err) => void){
+  initiateWithdraw(callback:(err:any) => void){
      inquirer.prompt([
       {
         name:'export',
@@ -144,7 +151,7 @@ export default class IceWalletPublic extends IceWallet {
         message:'enter the amount to send in bits',
         validate: amount => {if(!Number.isInteger(Number(amount))) return 'Must be an integer'; else return true}
       }])
-      .then((answers) => {
+      .then((answers:any) => {
         let to = answers['address'];
         let amount = Number(unit.fromBits(answers['amount']).satoshis);
         this.wallet.createTransaction(to, amount, (err, serialized) => {
@@ -163,7 +170,7 @@ export default class IceWalletPublic extends IceWallet {
     })
   }
 
-  completeWithdraw(callback:(err) => void){
+  completeWithdraw(callback:(err:any) => void){
     inquirer.prompt([
       {
         name:'import',
@@ -176,7 +183,7 @@ export default class IceWalletPublic extends IceWallet {
           return answer;
         }
       }])
-      .then((answers) => {
+      .then((answers:any) => {
         fs.readFile(this.pathToSignedTransaction, 'utf8', (err, data) => {
           if (err){
             return callback(err);

@@ -1,8 +1,10 @@
 var bitcore = require('bitcore-lib');
 import async = require('async');
 import {InsightService} from '../Services/InsightService';
+import {PublicWalletInfo} from '../Models/PublicWalletInfo'
 import * as BM from '../Models/BitcoreModels';
 import WalletService from './WalletService';
+import {Deserialize, Serialize} from 'cerialize'
 
 class PublicWalletService extends WalletService {
   insightService:InsightService;
@@ -11,9 +13,9 @@ class PublicWalletService extends WalletService {
   externalAddresses:BM.AddressInfo[];
   lastUpdated:Date;
 
-  constructor(publicKey: string, password:string)
+  constructor(info: PublicWalletInfo, password:string)
   {
-    super(publicKey, password);
+    super(info, password);
     this.insightService = new InsightService('https://insight.bitpay.com/api/');
     this.transactions = [];
     this.changeAddresses= []; 
@@ -21,16 +23,18 @@ class PublicWalletService extends WalletService {
     this.lastUpdated = new Date();
   }
   
-  static openWallet(password:string, encryptedInfo:string, callback:(err, info:string, wallet:PublicWalletService) => void){
+  static openWallet(password:string, encryptedInfo:string, callback:(err:any, info:string, wallet:PublicWalletService) => void){
     this.cryptoService.decrypt(password, encryptedInfo, (err, decrypted) => {
       if (err){
         return callback(err,null,null);
       }
       try {
-        var wallet = new PublicWalletService(decrypted, password);
+        var json = JSON.parse(decrypted);
+        var walletInfo:PublicWalletInfo = Deserialize(json, PublicWalletInfo)
+        var wallet = new PublicWalletService(walletInfo, password);
       }
       catch(err){
-        return callback('Could not create wallet, check your xpub',decrypted,null);
+        return callback('Could not create wallet, check your xpub or password',decrypted,null);
       }
       return callback(null, decrypted, wallet);
     });
@@ -63,7 +67,7 @@ class PublicWalletService extends WalletService {
     var addrs = this.addressRange(startingAddress,startingAddress + 19, change);
     var self = this;
 
-    function combine(err,resp,body){
+    function combine(err:any,resp:any,body:any){
       if (err){
         return callback(err,null);
       }
@@ -146,7 +150,7 @@ class PublicWalletService extends WalletService {
     })
   }
 
-  createTransaction(to:string, amount:number, callback:(err,serializedTransaction:string) => void){
+  createTransaction(to:string, amount:number, callback:(err:any,serializedTransaction:string) => void){
     var addrs:string[] = [];
     var total:number = 0;
     var standardFee = 15000;
@@ -186,19 +190,20 @@ class PublicWalletService extends WalletService {
     })
   }
 
-  broadcastTransaction(serializedTransaction:string, callback:(err, txid) => void){
+  broadcastTransaction(serializedTransaction:string, callback:(err:any, txid:any) => void){
     var transaction = new bitcore.Transaction(JSON.parse(serializedTransaction));
     this.insightService.broadcastTransaction(transaction.serialize(),callback);
   }
 
-  exportInfo(callback:(err, encryptedInfo:string) => void){
+  exportInfo(callback:(err:any, encryptedInfo:string) => void){
     // derive the encryption key
     PublicWalletService.cryptoService.deriveKey(this.password, (err,key) => {
     if(err){
       return callback(err,null);
     }
-
-    let encrypted = PublicWalletService.cryptoService.encrypt(key, this.hdPublicKey.toString());
+    var serialized = Serialize(this.walletInfo);
+    var stringified = JSON.stringify(serialized);
+    let encrypted = PublicWalletService.cryptoService.encrypt(key, stringified);
     return callback(null, encrypted);
     });
   }

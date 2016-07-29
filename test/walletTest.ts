@@ -1,14 +1,12 @@
 
 import {PublicWalletService} from '../src/Services/PublicWalletService';
 import PrivateWalletService from '../src/Services/PrivateWalletService';
-import {WalletInfo} from '../src/Models/WalletInfo'
+import {PrivateWalletInfo} from '../src/Models/PrivateWalletInfo'
 var bitcore = require('bitcore-lib');
 
-var walletInfo = new WalletInfo()
-walletInfo.seed = 'scheme caution cabin snack squeeze busy lava duck bleak cement medal endless';
-walletInfo.exportSeed = true;
-walletInfo.nextUnusedAddresses.external = 20;
-walletInfo.nextUnusedAddresses.change = 20;
+var seed = 'scheme caution cabin snack squeeze busy lava duck bleak cement medal endless';
+var walletInfo = new PrivateWalletInfo(seed, true);
+walletInfo.addAccount('Default', 0 , 20, 20)
 var privateWallet = new PrivateWalletService(walletInfo,'secret');
 var pubKey = privateWallet.hdPublicKey.toString();
 console.log(pubKey);

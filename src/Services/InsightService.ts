@@ -23,7 +23,7 @@ class InsightService {
     var req = request.post('addrs/', opts, callback)
   }
   
-  getUtxos(addresses:string[], callback:(err, utxos:BM.Utxo[]) => void){
+  getUtxos(addresses:string[], callback:(err:any, utxos:BM.Utxo[]) => void){
     var addrs = addresses.reduce((prev, cur) => {return cur + ',' + prev} )
     
     var opts:request.CoreOptions = {
@@ -41,7 +41,7 @@ class InsightService {
     })
   }
   
-  broadcastTransaction(transaction:string, callback:(err, txid) => void){
+  broadcastTransaction(transaction:string, callback:(err:any, txid:any) => void){
     var opts:request.CoreOptions = {
       baseUrl:this.baseUrl,
       body: JSON.stringify({rawtx:transaction}),

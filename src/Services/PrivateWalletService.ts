@@ -1,7 +1,6 @@
 var bitcore = require('bitcore-lib');
 var Mnemonic = require('bitcore-mnemonic');
-
-
+import {Deserialize, Serialize} from 'cerialize'
 import {PrivateWalletInfo} from '../Models/PrivateWalletInfo'
 import TransactionInfo from '../Models/TransactionInfo' 
 import WalletService from './WalletService'
@@ -14,20 +13,29 @@ export default class PrivateWalletService extends WalletService {
   get accountHdPrivKey():any {
     return this.walletHdPrivKey.derive("m/44'/0'").derive(this.selectedAccountIndex,true);
   }
+  
   get nextChangeIndex():number {
       return this.walletInfo.accounts[this.selectedAccountIndex].nextChangeIndex;
   }
+  set nextChangeIndex(value:number) {
+      this.walletInfo.accounts[this.selectedAccountIndex].nextChangeIndex = value;
+  }
+
   get nextExternalIndex():number {
       return this.walletInfo.accounts[this.selectedAccountIndex].nextExternalIndex;
   }
+  set nextExternalIndex(value:number) {
+      this.walletInfo.accounts[this.selectedAccountIndex].nextExternalIndex = value;
+  }
 
-  static openWallet(password:string, encryptedInfo:string, callback:(err, info:PrivateWalletInfo, wallet:PrivateWalletService) => void){
+  static openWallet(password:string, encryptedInfo:string, callback:(err:any, info:PrivateWalletInfo, wallet:PrivateWalletService) => void){
     this.cryptoService.decrypt(password, encryptedInfo, (err, decrypted) => {
       if (err){
         return callback(err,null,null);
       }
       try {
-        var walletInfo:PrivateWalletInfo = JSON.parse(decrypted);
+        var json = JSON.parse(decrypted);
+        var walletInfo:PrivateWalletInfo = Deserialize(json, PrivateWalletInfo);
       }
       catch(err){
         return callback('cannot open wallet, make sure your password is correct',null,null)
@@ -42,7 +50,7 @@ export default class PrivateWalletService extends WalletService {
     });
   }
 
-  static seedWallet(password:string, info:PrivateWalletInfo, seed:string, callback:(err,wallet:PrivateWalletService) => void){
+  static seedWallet(password:string, info:PrivateWalletInfo, seed:string, callback:(err:any,wallet:PrivateWalletService) => void){
     this.cryptoService.verifyHash(info.seedHash, seed, (err, matched) => {
       if (err){
         return callback (err, null)
@@ -80,18 +88,18 @@ export default class PrivateWalletService extends WalletService {
   }
 
   getDepositAddress():string{
-    return this.address(this.walletInfo.nextUnusedAddresses.external, false);
+    return this.address(this.nextExternalIndex, false);
   }
 
   incrementChangeIndex(){
-    this.walletInfo.nextUnusedAddresses.change += 1;
+    this.nextChangeIndex += 1;
   }
 
   incrementExternalIndex(){
-    this.walletInfo.nextUnusedAddresses.external += 1;
+    this.nextExternalIndex += 1;
   }
 
-  exportInfo(callback:(err, encryptedInfo:string) => void){
+  exportInfo(callback:(err:any, encryptedInfo:string) => void){
     // we can derive the key and hash the seed in parallel
     async.parallel<string>({
       // derive the encryption key
@@ -116,17 +124,10 @@ export default class PrivateWalletService extends WalletService {
       if(err){
         return callback(err,null);
       }
-      // copy the info
-      var exportInfo = new WalletInfo();
-      exportInfo.exportSeed = this.walletInfo.exportSeed;
-      exportInfo.seedHash = this.walletInfo.seedHash;
-      exportInfo.seed = this.walletInfo.exportSeed ? this.walletInfo.seed : null;
-      exportInfo.nextUnusedAddresses.change = this.walletInfo.nextUnusedAddresses.change;
-      exportInfo.nextUnusedAddresses.external = this.walletInfo.nextUnusedAddresses.external;
-
-      let encrypted = PrivateWalletService.cryptoService.encrypt(results['cryptoKey'], JSON.stringify(exportInfo));
+      var serialized = Serialize(this.walletInfo);
+      var stringified = JSON.stringify(serialized);
+      let encrypted = PrivateWalletService.cryptoService.encrypt(results['cryptoKey'], stringified);
       return callback(null, encrypted);
-      
     });
   }
 
@@ -134,20 +135,19 @@ export default class PrivateWalletService extends WalletService {
     var transaction = new bitcore.Transaction(JSON.parse(serializedTransaction));
     var info = new TransactionInfo();
     info.outputTotals = {};
-    transaction.outputs.forEach((output) => {
+    transaction.outputs.forEach((output:any) => {
       info.outputTotals[output._script.toAddress().toString()] = output._satoshis;
     })
     return info;
   }
 
-  completeTransaction(serializedTransaction:string, fee):string{
+  completeTransaction(serializedTransaction:string, fee:number):string{
     var transaction = new bitcore.Transaction(JSON.parse(serializedTransaction));
-    var indexes = this.walletInfo.nextUnusedAddresses;
-    var changePrivateKeys   = this.privateKeyRange(0, indexes.change   - 1, true);
-    var externalPrivateKeys = this.privateKeyRange(0, indexes.external - 1, false);
+    var changePrivateKeys   = this.privateKeyRange(0, this.nextChangeIndex - 1, true);
+    var externalPrivateKeys = this.privateKeyRange(0, this.nextExternalIndex - 1, false);
 
     transaction
-      .change(this.address(indexes.change, true))
+      .change(this.address(this.nextChangeIndex, true))
       .fee(fee)
       .sign(externalPrivateKeys.concat(changePrivateKeys));
     // this performs some checks

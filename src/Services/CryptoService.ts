@@ -6,8 +6,8 @@ export default class cryptoService {
   keyLength = 512;
   slt = 'A55F3D3A-7204-4582-906A-1EC928F79262';
 
-  deriveKey(password:string, callback:(err, key:string) => void){
-    scrypt.hash(password, {"N":16,"r":1,"p":1}, this.keyLength, this.slt, (err, hash) => {
+  deriveKey(password:string, callback:(err:any, key:string) => void){
+    scrypt.hash(password, {"N":16,"r":1,"p":1}, this.keyLength, this.slt, (err:any, hash:any) => {
       if (err){
         return callback(err,null);
       }
@@ -15,7 +15,7 @@ export default class cryptoService {
     });
   }
 
-  decrypt(password:string, encrypted:string, callback:(err, decrypted:string) => void){
+  decrypt(password:string, encrypted:string, callback:(err:any, decrypted:string) => void){
     this.deriveKey(password, (err, key) => {
       var decipher = crypto.createDecipher(this.cryptoAlgorithm,key);
       var decrypted = decipher.update(encrypted,'hex','utf8');
@@ -31,9 +31,9 @@ export default class cryptoService {
     return encrypted;
   }
 
-  hash(secret:string, callback:(err, hash:string) => void){
+  hash(secret:string, callback:(err:any, hash:string) => void){
     var params = scrypt.paramsSync(10, 750000000, 0.5);
-    scrypt.kdf(secret, params, (err, hash) =>{
+    scrypt.kdf(secret, params, (err:any, hash:any) =>{
       if(err){
         return callback(err, null);
       }
@@ -41,7 +41,7 @@ export default class cryptoService {
     })
   }
 
-  verifyHash(hash:string, secret:string, callback:(err,matched) =>void) {
+  verifyHash(hash:string, secret:string, callback:(err:any,matched:any) =>void) {
     scrypt.verifyKdf(new Buffer(hash, 'hex'), new Buffer(secret), callback);
   }
 }

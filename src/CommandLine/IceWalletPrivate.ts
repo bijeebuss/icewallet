@@ -3,20 +3,20 @@ let qrcode = require('qrcode-terminal');
 let unit = require('bitcore-lib').Unit;
 import PrivateWalletService from '../Services/PrivateWalletService';
 import IceWallet from './IceWallet';
-import {WalletInfo} from '../Models/WalletInfo';
+import {PrivateWalletInfo} from '../Models/PrivateWalletInfo';
 import TransactionInfo from '../Models/transactionInfo';
 import inquirer = require('inquirer');
 
 export default class IceWalletPrivate extends IceWallet {
   wallet:PrivateWalletService;
 
-  loadWalletFromInfo(callback:(err,wallet:PrivateWalletService) => void) {
+  loadWalletFromInfo(callback:(err:any,wallet:PrivateWalletService) => void) {
     inquirer.prompt({
       name:'password',
       type:'password',
       message:'enter your password to open the wallet',
     })
-    .then((answers) => {
+    .then((answers:any) => {
       let password = answers['password'].toString();
       console.log('loading and decrypting wallet info from' + this.pathToWalletInfo);
       console.log('this might take a minute');
@@ -37,18 +37,18 @@ export default class IceWalletPrivate extends IceWallet {
     })
   }
 
-  verifySeed(password:string, info:WalletInfo, callback:(err, wallet:PrivateWalletService) => void){
+  verifySeed(password:string, info:PrivateWalletInfo, callback:(err:any, wallet:PrivateWalletService) => void){
     inquirer.prompt([{
       name:'seed',
       message:'the seed is not stored in the info please enter it now to open the wallet',
     }])
-    .then((answers) => {
+    .then((answers:any) => {
       console.log('verifying seed...')
       PrivateWalletService.seedWallet(password, info, answers['seed'].toString(), callback); 
     })
   }
 
-  createNewWallet(callback:(err,wallet:PrivateWalletService) => void){
+  createNewWallet(callback:(err:any,wallet:PrivateWalletService) => void){
     inquirer.prompt([
       {
         name:'password1',
@@ -62,7 +62,7 @@ export default class IceWalletPrivate extends IceWallet {
         message:'retype password',
         validate:(password) => {if(!password) return 'Password required'; else return true}
       }])
-      .then((passwords) => {
+      .then((passwords:any) => {
         if(passwords['password1'] != passwords['password2']){
           return callback('Passwords dont match', null);
         }
@@ -91,12 +91,9 @@ export default class IceWalletPrivate extends IceWallet {
             validate:(changeIndex) => {if(!Number.isInteger(Number(changeIndex))) return 'Must be an integer'; else return true}
           },
         ])
-        .then((answers) => {
-          var info = new WalletInfo();
-          info.seed = answers['seed'].toString();
-          info.exportSeed = Boolean(answers['exportSeed']);
-          info.nextUnusedAddresses.external = Number(answers['externalIndex']);
-          info.nextUnusedAddresses.change = Number(answers['changeIndex']);
+        .then((answers:any) => {
+          var info = new PrivateWalletInfo(answers['seed'].toString(), Boolean(answers['exportSeed']));
+          info.addAccount('Default', 0, Number(answers['changeIndex']), Number(answers['externalIndex']))
           try {
             var wallet = new PrivateWalletService(info, password.toString());
           }
@@ -110,23 +107,26 @@ export default class IceWalletPrivate extends IceWallet {
   }
 
   displayMenu(){
-    var choices = {
-      deposit:'Deposit', 
-      withdraw:'Withdraw', 
-      showUsed:'Show Used Addresses', 
-      generateNewAddresses:'Generate New Addresses',
-      showSeed:'Show seed',
-      showXpub:'Show Account Public Key',
-      changeUsedAddresses:'Update Used Address Indexes',
-      saveAndQuit:'Save and Quit (dont quit any other way)' ,
+    class Choices {
+      [key: string]: string;
+      deposit = 'Deposit';
+      withdraw = 'Withdraw';
+      showUsed = 'Show Used Addresses';
+      generateNewAddresses = 'Generate New Addresses';
+      showSeed = 'Show seed';
+      showXpub = 'Show Account Public Key';
+      changeUsedAddresses = 'Update Used Address Indexes';
+      saveAndQuit = 'Save and Quit (dont quit any other way)';
     }
-    let choicesList = [];
+
+    let choices = new Choices();
+
     inquirer.prompt([
       {
         name:'choice',
         type:'list',
         message:'Choose an option',
-        choices: Object.keys(choices).map<string>((choice) => choices[choice])
+        choices: Object.keys(choices).map<string>(choice => choices[choice])
       },
       {
         name:'fee',
@@ -136,10 +136,10 @@ export default class IceWalletPrivate extends IceWallet {
         },
         validate:(fee) => {if(!Number.isInteger(Number(fee))) return 'Must be an integer'; else return true}
       }])
-      .then((answers) => {
+      .then((answers:any) => {
         let choice:string = answers['choice'];
         let fee = Number(unit.fromBits(answers['fee']).satoshis);
-        let done = (err) => {
+        let done = (err:any) => {
           if (err){
             console.log(err);
           }
@@ -181,7 +181,7 @@ export default class IceWalletPrivate extends IceWallet {
       })
   }
 
-  deposit(callback:(err) => void){
+  deposit(callback:(err:any) => void){
     var newAddress = this.wallet.getDepositAddress();
     console.log('Send coins to:' + newAddress);
     qrcode.generate(newAddress);
@@ -191,7 +191,7 @@ export default class IceWalletPrivate extends IceWallet {
         message:'Did the transaction complete?',
         type:'confirm'
       })
-      .then((answers) => {
+      .then((answers:any) => {
         if(answers['choice']){
           console.log('good')
           this.wallet.incrementExternalIndex();
@@ -203,7 +203,7 @@ export default class IceWalletPrivate extends IceWallet {
     })
   }
 
-  verifyTransaction(transaction:TransactionInfo, fee, callback:(err) => void){
+  verifyTransaction(transaction:TransactionInfo, fee:number, callback:(err:any) => void){
     console.log('Please verify this transaction');
     for(let address in transaction.outputTotals){
       console.log('Send: '   + unit.fromSatoshis(transaction.outputTotals[address]).bits + 'bits');
@@ -217,7 +217,7 @@ export default class IceWalletPrivate extends IceWallet {
       type:'confirm',
       message:'answer y/n',
     })
-    .then((answers) => {
+    .then((answers:any) => {
       let complete:boolean = answers['complete'];
       if(complete){
         return callback(null);
@@ -228,7 +228,7 @@ export default class IceWalletPrivate extends IceWallet {
     });
   }
 
-  withdraw(fee:number, callback:(err) => void){
+  withdraw(fee:number, callback:(err:any) => void){
     inquirer.prompt([
       {
         name:'import',
@@ -252,7 +252,7 @@ export default class IceWalletPrivate extends IceWallet {
           return answer;
         }
       }])
-      .then((answers) => {
+      .then((answers:any) => {
         fs.readFile(this.pathToUnsignedTransaction,'utf8', (err, serialized) => {
           if(err){
             return callback(err);
@@ -283,16 +283,16 @@ export default class IceWalletPrivate extends IceWallet {
 
   printAddresses(){
     console.log('change: ');
-    this.wallet.addressRange(0, this.wallet.walletInfo.nextUnusedAddresses.change - 1, true).forEach((address) => {
+    this.wallet.addressRange(0, this.wallet.nextChangeIndex - 1, true).forEach((address) => {
       console.log('\t' + address);
     })
     console.log('external: ');
-    this.wallet.addressRange(0, this.wallet.walletInfo.nextUnusedAddresses.external - 1, false).forEach((address) => {
+    this.wallet.addressRange(0, this.wallet.nextExternalIndex - 1, false).forEach((address) => {
       console.log('\t' + address);
     })
   }
 
-  generateNewAddresses(callback:(err) => void){
+  generateNewAddresses(callback:(err:any) => void){
     inquirer.prompt([
       {
         name:'count',
@@ -304,21 +304,21 @@ export default class IceWalletPrivate extends IceWallet {
         message:'Mark these as used? (may cause issues updating public wallet if you dont use them then deposit to this account again)',
         type:'confirm',
       }])
-      .then((answers) => {
+      .then((answers:any) => {
         let count = Number(answers['count']);
         let burn = Boolean(answers['burn']);
-        let starting = this.wallet.walletInfo.nextUnusedAddresses.external;
+        let starting = this.wallet.nextExternalIndex;
         let ending = starting + count - 1;
         this.wallet.addressRange(starting, ending, false).forEach((address) => {
           console.log(address);
         })
         if(burn){
-          this.wallet.walletInfo.nextUnusedAddresses.external += count;
+          this.wallet.nextExternalIndex += count;
         }
         callback(null);
       })
   }
-  changeUsedAddresses(callback:(err) => void){
+  changeUsedAddresses(callback:(err:any) => void){
     inquirer.prompt([
       {
         name:'externalIndex',
@@ -333,9 +333,9 @@ export default class IceWalletPrivate extends IceWallet {
         validate:(changeIndex) => {if(!Number.isInteger(Number(changeIndex))) return 'Must be an integer'; else return true}
       },
       ])
-      .then((answers) => {
-        this.wallet.walletInfo.nextUnusedAddresses.external = Number(answers['externalIndex']);
-        this.wallet.walletInfo.nextUnusedAddresses.change = Number(answers['changeIndex']);
+      .then((answers:any) => {
+        this.wallet.nextExternalIndex = Number(answers['externalIndex']);
+        this.wallet.nextChangeIndex = Number(answers['changeIndex']);
         console.log('sucessfully updated wallet');
         return callback(null); 
       })

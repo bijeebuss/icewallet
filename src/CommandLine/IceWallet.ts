@@ -9,9 +9,9 @@ abstract class IceWallet {
     public pathToUnsignedTransaction:string, 
     public pathToSignedTransaction:string,
     newWallet:boolean,
-    callback?:(err,wallet:IceWallet) => void) {
+    callback?:(err:any,wallet:IceWallet) => void) {
       
-      let done = (err, wallet:WalletService) => {
+      let done = (err:any, wallet:WalletService) => {
         if(err && callback){
             return callback(err,null); 
           }
@@ -34,7 +34,7 @@ abstract class IceWallet {
         this.loadWalletFromInfo(done);
       }
   }
-  saveAndQuit(callback:(err) => void){
+  saveAndQuit(callback:(err:any) => void){
     console.log('encerypting and saving wallet to ' + this.pathToWalletInfo)
     this.wallet.exportInfo((err, encrypted) => {
       if(err){
@@ -50,7 +50,7 @@ abstract class IceWallet {
     });
   }
 
-  saveInfo(encrypted:string, callback:(err) => void){
+  saveInfo(encrypted:string, callback:(err:any) => void){
     fs.writeFile(this.pathToWalletInfo, new Buffer(encrypted,'hex'), (err) => {
       if (err){
         return callback(err);
@@ -59,9 +59,9 @@ abstract class IceWallet {
     })
   }
 
-  abstract displayMenu();
-  abstract createNewWallet(callback:(err, WalletService) => void);
-  abstract loadWalletFromInfo(callback:(err, WalletService) => void);
+  abstract displayMenu():void;
+  abstract createNewWallet(callback:(err:any, WalletService:WalletService) => void):void;
+  abstract loadWalletFromInfo(callback:(err:any, WalletService:WalletService) => void):void;
 }
 
 export default IceWallet

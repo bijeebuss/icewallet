@@ -3,11 +3,12 @@
         "target": "ES6",
         "module": "commonjs",
         "declaration": false,
-        "noImplicitAny": false,
+        "noImplicitAny": true,
         "removeComments": true,
         "noLib": false,
         "inlineSourceMap": true,
-        "outDir": "bin"
+        "outDir": "bin",
+        "experimentalDecorators": true
     },
     "exclude": [
         "node_modules",
