@@ -11,21 +11,21 @@ export default class PrivateWalletService extends WalletService {
   walletInfo:PrivateWalletInfo;
   
   get accountHdPrivKey():any {
-    return this.walletHdPrivKey.derive("m/44'/0'").derive(this.selectedAccountIndex,true);
+    return this.walletHdPrivKey.derive("m/44'/0'").derive(this.selectedAccount.index,true);
   }
   
   get nextChangeIndex():number {
-      return this.walletInfo.accounts[this.selectedAccountIndex].nextChangeIndex;
+      return this.selectedAccount.nextChangeIndex;
   }
   set nextChangeIndex(value:number) {
-      this.walletInfo.accounts[this.selectedAccountIndex].nextChangeIndex = value;
+      this.selectedAccount.nextChangeIndex = value;
   }
 
   get nextExternalIndex():number {
-      return this.walletInfo.accounts[this.selectedAccountIndex].nextExternalIndex;
+      return this.selectedAccount.nextExternalIndex;
   }
   set nextExternalIndex(value:number) {
-      this.walletInfo.accounts[this.selectedAccountIndex].nextExternalIndex = value;
+      this.selectedAccount.nextExternalIndex = value;
   }
 
   static openWallet(password:string, encryptedInfo:string, callback:(err:any, info:PrivateWalletInfo, wallet:PrivateWalletService) => void){

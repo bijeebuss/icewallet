@@ -78,22 +78,9 @@ export default class IceWalletPrivate extends IceWallet {
             message:'Do you want to export the seed with the wallet info, (exports are always encrypted)?',
             type:'confirm',
           },
-          {
-            name:'externalIndex',
-            message:'What is the starting external address index',
-            default:0,
-            validate:(externalIndex) => {if(!Number.isInteger(Number(externalIndex))) return 'Must be an integer'; else return true}
-          },
-          {
-            name:'changeIndex',
-            message:'What is the starting change address index',
-            default:0,
-            validate:(changeIndex) => {if(!Number.isInteger(Number(changeIndex))) return 'Must be an integer'; else return true}
-          },
         ])
         .then((answers:any) => {
           var info = new PrivateWalletInfo(answers['seed'].toString(), Boolean(answers['exportSeed']));
-          info.addAccount('Default', 0, Number(answers['changeIndex']), Number(answers['externalIndex']))
           try {
             var wallet = new PrivateWalletService(info, password.toString());
           }
@@ -106,16 +93,50 @@ export default class IceWalletPrivate extends IceWallet {
       })
   }
 
+  addAccount(callback:(err:any) => void){
+    inquirer.prompt([
+      {
+        name:'name',
+        message:'Give a name for this account, be descriptive',
+      },
+      {
+        name:'index',
+        message:'what is the BIP32 derivation index for this account',
+        validate:(externalIndex) => {if(!Number.isInteger(Number(externalIndex))) return 'Must be an integer'; else return true}            
+      },
+      {
+        name:'externalIndex',
+        message:'What is the starting external address index',
+        default:0,
+        validate:(externalIndex) => {if(!Number.isInteger(Number(externalIndex))) return 'Must be an integer'; else return true}
+      },
+      {
+        name:'changeIndex',
+        message:'What is the starting change address index',
+        default:0,
+        validate:(changeIndex) => {if(!Number.isInteger(Number(changeIndex))) return 'Must be an integer'; else return true}
+      },
+    ])
+    .then((answers:any) => {
+      this.wallet.walletInfo.addAccount(answers['name'], Number(answers['index']), Number(answers['changeIndex']), Number(answers['externalIndex']))
+      return callback(null);
+    })
+  }
+
   displayMainMenu(){
+    let hasAccounts:boolean = this.wallet.walletInfo.accounts.length > 0;
     class Choices {
       [key: string]: string;
-      selectAccount: 'Select Account';
-      addAccount: 'Add a New Account';
+      selectAccount:string
+      addAccount = 'Add a New Account';
       saveAndQuit = 'Save and Quit (dont quit any other way)';
+      constructor(){
+        if(hasAccounts){
+          this.selectAccount = 'Select Account';
+        }
+      }
     }
-
     let choices = new Choices();
-
     inquirer.prompt([
       {
         name:'choice',
@@ -128,49 +149,37 @@ export default class IceWalletPrivate extends IceWallet {
         type:'list',
         message:'Choose an existing account',
         when: answers => answers['choice'] == choices.selectAccount,
+        validate: account => {
+          if (!account) 
+            return 'Create an account first'; 
+          else return true
+        },
         choices: this.wallet.walletInfo.accounts.map(account => account.name),
       }])
       .then((answers:any) => {
         let choice:string = answers['choice'];
-        let account = answers['account'];
+        let account:string = answers['account'];
         let done = (err:any) => {
           if (err){
             console.log(err);
           }
           if (choice != choices.saveAndQuit){
-            this.displayMenu();
+            this.displayMainMenu();
           }
         }
         switch(choice){
-          case choices.deposit: 
-            this.deposit(done);
+          case choices.selectAccount: 
+            this.wallet.switchAccount(account);
+            this.displayAccountMenu();
             break;
-          case choices.withdraw:
-            this.withdraw(fee, done);
-            break;
-          case choices.showUsed:
-            this.printAddresses();  
-            done(null);
-            break;
-          case choices.generateNewAddresses:
-            this.generateNewAddresses(done);
-            break;  
-          case choices.changeUsedAddresses:
-            this.changeUsedAddresses(done);
-            break;
-          case choices.showSeed:  
-            console.log(this.wallet.walletInfo.seed);
-            done(null);
-            break;
-          case choices.showXpub:
-            console.log(this.wallet.hdPublicKey.toString());
-            this.displayMenu();
+          case choices.addAccount:
+            this.addAccount(done);
             break;
           case choices.saveAndQuit:
             this.saveAndQuit(done);
             break;
           default:
-            this.displayMenu();
+            this.displayMainMenu();
         }
       })
   }
@@ -185,6 +194,7 @@ export default class IceWalletPrivate extends IceWallet {
       showSeed = 'Show seed';
       showXpub = 'Show Account Public Key';
       changeUsedAddresses = 'Update Used Address Indexes';
+      backToMain = 'Back To Main Menu';
       saveAndQuit = 'Save and Quit (dont quit any other way)';
     }
 
@@ -213,7 +223,7 @@ export default class IceWalletPrivate extends IceWallet {
             console.log(err);
           }
           if (choice != choices.saveAndQuit){
-            this.displayMenu();
+            this.displayAccountMenu();
           }
         }
         switch(choice){
@@ -239,13 +249,16 @@ export default class IceWalletPrivate extends IceWallet {
             break;
           case choices.showXpub:
             console.log(this.wallet.hdPublicKey.toString());
-            this.displayMenu();
+            this.displayAccountMenu();
+            break;
+          case choices.backToMain:
+            this.displayMainMenu();
             break;
           case choices.saveAndQuit:
             this.saveAndQuit(done);
             break;
           default:
-            this.displayMenu();
+            this.displayAccountMenu();
         }
       })
   }

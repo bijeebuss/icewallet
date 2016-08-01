@@ -2,20 +2,24 @@ var bitcore = require('bitcore-lib');
 import CryptoService from '../Services/CryptoService'
 import {PublicWalletInfo} from '../Models/PublicWalletInfo'
 import {PrivateWalletInfo} from '../Models/PrivateWalletInfo'
+import {Account} from '../Models/Account'
 
 abstract class WalletService {
   password:string;
   walletInfo:PublicWalletInfo | PrivateWalletInfo;
-  selectedAccountIndex:number;
+  selectedAccount:Account;
   static cryptoService = new CryptoService();
   
+  switchAccount(accountName:string){
+    this.selectedAccount = this.walletInfo.accounts.find(account => account.name == accountName);
+  }
+
   get hdPublicKey():any {
-      return this.walletInfo.accounts[this.selectedAccountIndex].hdPublicKey;
+      return this.selectedAccount.hdPublicKey;
   }
   
   constructor(info:PublicWalletInfo | PrivateWalletInfo, password:string){
     this.walletInfo = info;
-    this.selectedAccountIndex = 0;
     this.password = password;
   }
   

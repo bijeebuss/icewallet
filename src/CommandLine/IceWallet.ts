@@ -23,7 +23,7 @@ abstract class IceWallet {
         if(callback){
           return callback(null, this);
         }
-        this.displayMenu();
+        this.displayMainMenu();
       }
       
       if(newWallet){
@@ -59,7 +59,8 @@ abstract class IceWallet {
     })
   }
 
-  abstract displayMenu():void;
+  abstract displayMainMenu():void;
+  abstract displayAccountMenu():void;
   abstract createNewWallet(callback:(err:any, WalletService:WalletService) => void):void;
   abstract loadWalletFromInfo(callback:(err:any, WalletService:WalletService) => void):void;
 }
