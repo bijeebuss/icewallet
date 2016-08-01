@@ -106,7 +106,76 @@ export default class IceWalletPrivate extends IceWallet {
       })
   }
 
-  displayMenu(){
+  displayMainMenu(){
+    class Choices {
+      [key: string]: string;
+      selectAccount: 'Select Account';
+      addAccount: 'Add a New Account';
+      saveAndQuit = 'Save and Quit (dont quit any other way)';
+    }
+
+    let choices = new Choices();
+
+    inquirer.prompt([
+      {
+        name:'choice',
+        type:'list',
+        message:'Choose an option',
+        choices: Object.keys(choices).map<string>(choice => choices[choice])
+      },
+      {
+        name:'account',
+        type:'list',
+        message:'Choose an existing account',
+        when: answers => answers['choice'] == choices.selectAccount,
+        choices: this.wallet.walletInfo.accounts.map(account => account.name),
+      }])
+      .then((answers:any) => {
+        let choice:string = answers['choice'];
+        let account = answers['account'];
+        let done = (err:any) => {
+          if (err){
+            console.log(err);
+          }
+          if (choice != choices.saveAndQuit){
+            this.displayMenu();
+          }
+        }
+        switch(choice){
+          case choices.deposit: 
+            this.deposit(done);
+            break;
+          case choices.withdraw:
+            this.withdraw(fee, done);
+            break;
+          case choices.showUsed:
+            this.printAddresses();  
+            done(null);
+            break;
+          case choices.generateNewAddresses:
+            this.generateNewAddresses(done);
+            break;  
+          case choices.changeUsedAddresses:
+            this.changeUsedAddresses(done);
+            break;
+          case choices.showSeed:  
+            console.log(this.wallet.walletInfo.seed);
+            done(null);
+            break;
+          case choices.showXpub:
+            console.log(this.wallet.hdPublicKey.toString());
+            this.displayMenu();
+            break;
+          case choices.saveAndQuit:
+            this.saveAndQuit(done);
+            break;
+          default:
+            this.displayMenu();
+        }
+      })
+  }
+  
+  displayAccountMenu(){
     class Choices {
       [key: string]: string;
       deposit = 'Deposit';
