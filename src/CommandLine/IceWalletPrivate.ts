@@ -1,6 +1,7 @@
 import fs = require('fs');
 let qrcode = require('qrcode-terminal');
 let unit = require('bitcore-lib').Unit;
+let intl = require('intl');
 import PrivateWalletService from '../Services/PrivateWalletService';
 import IceWallet from './IceWallet';
 import {PrivateWalletInfo} from '../Models/PrivateWalletInfo';
@@ -122,73 +123,12 @@ export default class IceWalletPrivate extends IceWallet {
       return callback(null);
     })
   }
-
-  displayMainMenu(){
-    let hasAccounts:boolean = this.wallet.walletInfo.accounts.length > 0;
-    class Choices {
-      [key: string]: string;
-      selectAccount:string
-      addAccount = 'Add a New Account';
-      saveAndQuit = 'Save and Quit (dont quit any other way)';
-      constructor(){
-        if(hasAccounts){
-          this.selectAccount = 'Select Account';
-        }
-      }
-    }
-    let choices = new Choices();
-    inquirer.prompt([
-      {
-        name:'choice',
-        type:'list',
-        message:'Choose an option',
-        choices: Object.keys(choices).map<string>(choice => choices[choice])
-      },
-      {
-        name:'account',
-        type:'list',
-        message:'Choose an existing account',
-        when: answers => answers['choice'] == choices.selectAccount,
-        validate: account => {
-          if (!account) 
-            return 'Create an account first'; 
-          else return true
-        },
-        choices: this.wallet.walletInfo.accounts.map(account => account.name),
-      }])
-      .then((answers:any) => {
-        let choice:string = answers['choice'];
-        let account:string = answers['account'];
-        let done = (err:any) => {
-          if (err){
-            console.log(err);
-          }
-          if (choice != choices.saveAndQuit){
-            this.displayMainMenu();
-          }
-        }
-        switch(choice){
-          case choices.selectAccount: 
-            this.wallet.switchAccount(account);
-            this.displayAccountMenu();
-            break;
-          case choices.addAccount:
-            this.addAccount(done);
-            break;
-          case choices.saveAndQuit:
-            this.saveAndQuit(done);
-            break;
-          default:
-            this.displayMainMenu();
-        }
-      })
-  }
   
   displayAccountMenu(){
     class Choices {
       [key: string]: string;
       deposit = 'Deposit';
-      withdraw = 'Withdraw';
+      sign = 'Sign Transaction';
       showUsed = 'Show Used Addresses';
       generateNewAddresses = 'Generate New Addresses';
       showSeed = 'Show seed';
@@ -200,6 +140,7 @@ export default class IceWalletPrivate extends IceWallet {
 
     let choices = new Choices();
 
+    console.log('----------' + this.wallet.selectedAccount.name + '----------');
     inquirer.prompt([
       {
         name:'choice',
@@ -211,7 +152,7 @@ export default class IceWalletPrivate extends IceWallet {
         name:'fee',
         message:'enter your desired fee in bits',
         when: (answers) => {
-          return answers['choice'] == choices.withdraw
+          return answers['choice'] == choices.sign
         },
         validate:(fee) => {if(!Number.isInteger(Number(fee))) return 'Must be an integer'; else return true}
       }])
@@ -230,8 +171,8 @@ export default class IceWalletPrivate extends IceWallet {
           case choices.deposit: 
             this.deposit(done);
             break;
-          case choices.withdraw:
-            this.withdraw(fee, done);
+          case choices.sign:
+            this.sign(fee, done);
             break;
           case choices.showUsed:
             this.printAddresses();  
@@ -288,11 +229,11 @@ export default class IceWalletPrivate extends IceWallet {
   verifyTransaction(transaction:TransactionInfo, fee:number, callback:(err:any) => void){
     console.log('Please verify this transaction');
     for(let address in transaction.outputTotals){
-      console.log('Send: '   + unit.fromSatoshis(transaction.outputTotals[address]).bits + 'bits');
+      console.log('Send: '   + unit.fromSatoshis(transaction.outputTotals[address]).bits.toLocaleString() + ' bits');
       console.log('To:   '   + address);
     }
 
-    console.log('Fee:  '   + unit.fromSatoshis(fee).bits + 'bits');
+    console.log('Fee:  '   + unit.fromSatoshis(fee).bits.toLocaleString() + ' bits');
 
     inquirer.prompt({
       name:'complete',
@@ -310,7 +251,7 @@ export default class IceWalletPrivate extends IceWallet {
     });
   }
 
-  withdraw(fee:number, callback:(err:any) => void){
+  sign(fee:number, callback:(err:any) => void){
     inquirer.prompt([
       {
         name:'import',

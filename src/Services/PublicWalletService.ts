@@ -8,21 +8,18 @@ import {Deserialize, Serialize} from 'cerialize'
 
 class PublicWalletService extends WalletService {
   insightService:InsightService;
-  transactions:BM.Transaction[];
   changeAddresses:BM.AddressInfo[];
   externalAddresses:BM.AddressInfo[];
-  lastUpdated:Date;
+  walletInfo:PublicWalletInfo;
 
   constructor(info: PublicWalletInfo, password:string)
   {
     super(info, password);
     this.insightService = new InsightService('https://insight.bitpay.com/api/');
-    this.transactions = [];
     this.changeAddresses= []; 
     this.externalAddresses = [];
-    this.lastUpdated = new Date();
   }
-  
+
   static openWallet(password:string, encryptedInfo:string, callback:(err:any, info:string, wallet:PublicWalletService) => void){
     this.cryptoService.decrypt(password, encryptedInfo, (err, decrypted) => {
       if (err){
@@ -62,20 +59,28 @@ class PublicWalletService extends WalletService {
     })
   }
 
+  switchAccount(accountName:string, callback:(err:any) => void){
+    this.selectedAccount = this.walletInfo.accounts.find(account => account.name == accountName);
+    console.log('updating wallet account...');
+    return this.update(callback);
+  }
+  
+  // not used atm
   getTransactions(change:boolean, callback: (error: any, transactions: BM.Transaction[]) => void){
     var startingAddress = 0;
     var addrs = this.addressRange(startingAddress,startingAddress + 19, change);
+    var transactions: BM.Transaction[] = []
     var self = this;
 
     function combine(err:any,resp:any,body:any){
       if (err){
         return callback(err,null);
       }
-      var transactions:BM.Transaction[] = JSON.parse(body).items;
-      // if there is still nonempty addresses
-      if (transactions.length > 0){
-        // combine them
-        transactions.forEach((utxo) => self.transactions.push(utxo));
+      var transactionBatch:BM.Transaction[] = JSON.parse(body).items;
+      // combine them
+      transactionBatch.forEach((utxo) => transactions.push(utxo));
+      // if its still returning results
+      if (transactionBatch.length > 0){
         //increment the starting address
         startingAddress += 20;
         addrs = self.addressRange(startingAddress, startingAddress + 19, change);
@@ -83,7 +88,7 @@ class PublicWalletService extends WalletService {
         self.insightService.getTransactions(addrs, combine);
       }
       else {
-        return callback(err,transactions)
+        return callback(err,transactions);
       }
     }
 

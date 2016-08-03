@@ -9,10 +9,6 @@ abstract class WalletService {
   walletInfo:PublicWalletInfo | PrivateWalletInfo;
   selectedAccount:Account;
   static cryptoService = new CryptoService();
-  
-  switchAccount(accountName:string){
-    this.selectedAccount = this.walletInfo.accounts.find(account => account.name == accountName);
-  }
 
   get hdPublicKey():any {
       return this.selectedAccount.hdPublicKey;
@@ -37,6 +33,7 @@ abstract class WalletService {
     return addresses;
   }
 
+  abstract switchAccount(accountName:string, callback:(err:any) => void):void;
   abstract exportInfo(callback:(err:any, encryptedInfo:string) => void):void;
 }
 

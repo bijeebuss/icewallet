@@ -28,6 +28,11 @@ export default class PrivateWalletService extends WalletService {
       this.selectedAccount.nextExternalIndex = value;
   }
 
+  switchAccount(accountName:string, callback:(err:any) => void){
+    this.selectedAccount = this.walletInfo.accounts.find(account => account.name == accountName);
+    return callback(null);
+  }
+
   static openWallet(password:string, encryptedInfo:string, callback:(err:any, info:PrivateWalletInfo, wallet:PrivateWalletService) => void){
     this.cryptoService.decrypt(password, encryptedInfo, (err, decrypted) => {
       if (err){

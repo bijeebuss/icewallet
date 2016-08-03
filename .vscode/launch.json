@@ -2,7 +2,47 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch",
+            "name": "new pub",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceRoot}/src/CommandLine/iwpub.ts",
+            "stopOnEntry": false,
+            "args": ["new", "-w", "/Users/Michael/iceWallets/accountsPub.dat"],
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": null,
+            "runtimeExecutable": null,
+            "runtimeArgs": [
+                "--nolazy"
+            ],
+            "env": {
+                "NODE_ENV": "development"
+            },
+            "externalConsole": true,
+            "sourceMaps": true,
+            "outDir": "${workspaceRoot}/bin"
+        },
+        {
+            "name": "open pub",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceRoot}/src/CommandLine/iwpub.ts",
+            "stopOnEntry": false,
+            "args": ["open", "-w", "/Users/Michael/iceWallets/accountsPub.dat"],
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": null,
+            "runtimeExecutable": null,
+            "runtimeArgs": [
+                "--nolazy"
+            ],
+            "env": {
+                "NODE_ENV": "development"
+            },
+            "externalConsole": true,
+            "sourceMaps": true,
+            "outDir": "${workspaceRoot}/bin"
+        },
+        {
+            "name": "open priv",
             "type": "node",
             "request": "launch",
             "program": "${workspaceRoot}/src/CommandLine/iwpriv.ts",

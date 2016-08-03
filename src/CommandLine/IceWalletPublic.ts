@@ -1,9 +1,11 @@
 import fs = require('fs');
 let unit = require('bitcore-lib').Unit;
+let intl = require('intl');
 import inquirer = require('inquirer')
 import {PublicWalletService} from '../Services/PublicWalletService'
 import {PublicWalletInfo} from '../Models/PublicWalletInfo'
 import IceWallet from './IceWallet'
+
 
 export default class IceWalletPublic extends IceWallet {
   wallet:PublicWalletService;
@@ -27,27 +29,36 @@ export default class IceWalletPublic extends IceWallet {
           return callback('Passwords dont match', null);
         }
         let password = passwords['password1'];
-        inquirer.prompt([
-          {
-            name:'xpub',
-            message:'Enter the BIP32 xub key for your wallet account',
-            default:null,
-          },
-        ])
-        .then((answers:any) => {
-          try {
-            var info = new PublicWalletInfo();
-            info.addAccount(answers['xpub'].toString(), 'Default', 0, 0, 0);
-            var wallet = new PublicWalletService(info, password.toString());
-          }
-          catch(err){
-            return callback('Could not create wallet, make sure you typed the xpub correctly',null)
-          }
-          console.log('sucessfully created wallet');
-          console.log("updating wallet...");
-          wallet.update(callback);
-        })
+        try {
+          var info = new PublicWalletInfo();
+          var wallet = new PublicWalletService(info, password.toString());
+        }
+        catch(err){
+          return callback('Could not create wallet, make sure you typed the xpub correctly',null)
+        }
+        console.log('sucessfully created wallet');
+        return callback(null,wallet);
+        
       })
+  }
+
+  addAccount(callback:(err:any) => void):void {
+    inquirer.prompt([
+      {
+        name:'xpub',
+        message:'Enter the BIP32 xub key for your wallet account',
+        default:null,
+      },
+      {
+        name:'name',
+        message:'Give the account a name',
+        default:null,
+      },
+    ])
+    .then((answers:any) => {
+      this.wallet.walletInfo.addAccount(answers['xpub'].toString(), answers['name'].toString());
+      return callback(null);
+    })
   }
 
   loadWalletFromInfo(callback:(err:any,PublicWalletService:PublicWalletService) => void){
@@ -68,25 +79,26 @@ export default class IceWalletPublic extends IceWallet {
           if (err){
             return callback(err, null);
           }
-          console.log("updating wallet...");
-          return wallet.update(callback);
+          return callback(null,wallet);
         })
       })
     })
   }
   
-  displayMenu(){
+  displayAccountMenu(){
     class Choices {
       [key: string]: string;
       initiateWithdraw = 'Initiate Withdraw';
       completeWithdraw = 'Complete Withdraw';
       showBalace = 'Show Balance';
       update = 'Update';
+      backToMain = 'Back To Main Menu';
       saveAndQuit = 'Save and Quit (dont quit any other way)';
     }
 
     let choices = new Choices();
     
+    console.log('----------' + this.wallet.selectedAccount.name + '----------');
     inquirer.prompt([
       {
         name:'choice',
@@ -101,7 +113,7 @@ export default class IceWalletPublic extends IceWallet {
             console.log(err);
           }
           if (choice != choices.saveAndQuit){
-            this.displayMenu();
+            this.displayAccountMenu();
           }
         }
         switch(choice){
@@ -112,18 +124,21 @@ export default class IceWalletPublic extends IceWallet {
             this.completeWithdraw(done);
             break;
           case choices.showBalace:
-            console.log("Balance in bits: " + unit.fromSatoshis(this.wallet.balance).bits);
-            this.displayMenu();
+            console.log("Balance in bits: " + unit.fromSatoshis(this.wallet.balance).bits.toLocaleString());
+            this.displayAccountMenu();
             break;
           case choices.saveAndQuit:
             this.saveAndQuit(done);
+            break;
+          case choices.backToMain:
+            this.displayMainMenu();
             break;
           case choices.update:
             console.log('Updating Wallet...');
             this.wallet.update((err,wallet) => done(err));
             break;
           default:
-            this.displayMenu();
+            this.displayAccountMenu();
         }
       }
     )
