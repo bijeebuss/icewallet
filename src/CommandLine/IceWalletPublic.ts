@@ -92,6 +92,7 @@ export default class IceWalletPublic extends IceWallet {
       completeWithdraw = 'Complete Withdraw';
       showBalace = 'Show Balance';
       update = 'Update';
+      nextUnusedIndexes = 'Show next Unused Indexes';
       backToMain = 'Back To Main Menu';
       saveAndQuit = 'Save and Quit (dont quit any other way)';
     }
@@ -136,6 +137,11 @@ export default class IceWalletPublic extends IceWallet {
           case choices.update:
             console.log('Updating Wallet...');
             this.wallet.update((err,wallet) => done(err));
+            break;
+          case choices.nextUnusedIndexes:
+            console.log('Change: ' + this.wallet.changeAddresses.length);
+            console.log('External: ' + this.wallet.externalAddresses.length);
+            this.displayAccountMenu();
             break;
           default:
             this.displayAccountMenu();

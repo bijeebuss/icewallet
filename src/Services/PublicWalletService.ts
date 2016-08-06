@@ -25,6 +25,13 @@ class PublicWalletService extends WalletService {
       if (err){
         return callback(err,null,null);
       }
+      else if (decrypted.startsWith('xpub')){
+        let error = 'This version of Icewallet is not compatable with your wallet\n';
+        error += 'Please create a new wallet with your public key\n';
+        error += decrypted + '\n';
+        error += 'Then use the "Next Unused Address Indexes" option to update your private wallet';
+        return callback(error,null,null);
+      }
       try {
         var json = JSON.parse(decrypted);
         var walletInfo:PublicWalletInfo = Deserialize(json, PublicWalletInfo)
@@ -64,7 +71,7 @@ class PublicWalletService extends WalletService {
     console.log('updating wallet account...');
     return this.update(callback);
   }
-  
+
   // not used atm
   getTransactions(change:boolean, callback: (error: any, transactions: BM.Transaction[]) => void){
     var startingAddress = 0;
