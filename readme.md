@@ -15,13 +15,13 @@ To use as a cold storage wallet you will need familiarity with the command line 
 
 2. disconnect the cold storage computer from the internet
 
-3. create a new private wallet on the cold storage computer
+3. create a new private wallet on the cold storage computer and follow the instructions
 
     `iwpriv new`
 
 4. after its created, select the option to print the public key
 
-5. create a new public wallet on your main computer (it will ask for the public key from the previous step)
+5. create a new public wallet on your main computer and follow the instructions (it will ask for the public key from the previous step)
 
     `iwpub new`
 
@@ -34,13 +34,13 @@ thats it, now you have a cold storage wallet
 2. select "Initiate Withdraw" from the menu
 3. choose a path to your usb flash drive
 4. unmount the flash drive then insert it into the cold storage computer
-5. open the private wallet then select "Withdraw" from the menu
+5. open the private wallet then select "Sign Transaction" from the menu
 
     `iwpriv open`
 
 6. choose an export path on the flash drive
 7. unmount the flash drive and put it back into the main computer
-8. open the public wallet wallet and choose "Complete Transaction" from the menu
+8. open the public wallet wallet and choose "Complete Withdraw" from the menu
 
     `iwpub open`
 
