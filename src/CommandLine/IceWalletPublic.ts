@@ -91,6 +91,7 @@ export default class IceWalletPublic extends IceWallet {
       initiateWithdraw = 'Initiate Withdraw';
       completeWithdraw = 'Complete Withdraw';
       showBalace = 'Show Balance';
+      showXpub = 'Show xpub';
       update = 'Update';
       nextUnusedIndexes = 'Show next Unused Indexes';
       backToMain = 'Back To Main Menu';
@@ -128,6 +129,10 @@ export default class IceWalletPublic extends IceWallet {
             console.log("Balance in bits: " + unit.fromSatoshis(this.wallet.balance).bits.toLocaleString());
             this.displayAccountMenu();
             break;
+          case choices.showXpub:
+            console.log(this.wallet.selectedAccount.xpub);
+            this.displayAccountMenu();
+            break;
           case choices.saveAndQuit:
             this.saveAndQuit(done);
             break;
@@ -158,10 +163,6 @@ export default class IceWalletPublic extends IceWallet {
         when: (answers) => {
           return (!this.pathToUnsignedTransaction)
         },
-        filter:(answer) => {
-          this.pathToUnsignedTransaction = answer;
-          return answer;
-        }
       },
       {
         name:'address',
@@ -173,17 +174,18 @@ export default class IceWalletPublic extends IceWallet {
         validate: amount => {if(!Number.isInteger(Number(amount))) return 'Must be an integer'; else return true}
       }])
       .then((answers:any) => {
+        let exportPath:string = this.pathToUnsignedTransaction || answers['export'];
         let to = answers['address'];
         let amount = Number(unit.fromBits(answers['amount']).satoshis);
         this.wallet.createTransaction(to, amount, (err, serialized) => {
           if(err){
             return callback(err);
           }
-          fs.writeFile(this.pathToUnsignedTransaction, serialized, (err) => {
+          fs.writeFile(exportPath, serialized, (err) => {
             if(err){
               return callback(err);
             }
-            console.log('transaction written to ' + this.pathToUnsignedTransaction);
+            console.log('transaction written to: ' + exportPath);
             console.log('sign the transaction offline then complete it');
             return callback(null);
           })
@@ -199,13 +201,10 @@ export default class IceWalletPublic extends IceWallet {
         when: (answers) => {
           return (!this.pathToSignedTransaction)
         },
-        filter:(answer) => {
-          this.pathToSignedTransaction = answer;
-          return answer;
-        }
       }])
       .then((answers:any) => {
-        fs.readFile(this.pathToSignedTransaction, 'utf8', (err, data) => {
+        var importPath:string = this.pathToSignedTransaction || answers['import'];
+        fs.readFile(importPath, 'utf8', (err, data) => {
           if (err){
             return callback(err);
           }

@@ -130,7 +130,7 @@ export default class IceWalletPrivate extends IceWallet {
       deposit = 'Deposit';
       sign = 'Sign Transaction';
       showUsed = 'Show Used Addresses';
-      generateNewAddresses = 'Generate New Addresses';
+      exportAddresses = 'Export Addresses';
       showSeed = 'Show seed';
       showXpub = 'Show Account Public Key';
       changeUsedAddresses = 'Update Used Address Indexes';
@@ -178,8 +178,8 @@ export default class IceWalletPrivate extends IceWallet {
             this.printAddresses();  
             done(null);
             break;
-          case choices.generateNewAddresses:
-            this.generateNewAddresses(done);
+          case choices.exportAddresses:
+            this.exportAddresses(done);
             break;  
           case choices.changeUsedAddresses:
             this.changeUsedAddresses(done);
@@ -189,7 +189,8 @@ export default class IceWalletPrivate extends IceWallet {
             done(null);
             break;
           case choices.showXpub:
-            console.log(this.wallet.hdPublicKey.toString());
+            qrcode.generate(this.wallet.selectedAccount.xpub);
+            console.log(this.wallet.selectedAccount.xpub);
             this.displayAccountMenu();
             break;
           case choices.backToMain:
@@ -259,10 +260,6 @@ export default class IceWalletPrivate extends IceWallet {
         when: (answers) => {
           return (!this.pathToUnsignedTransaction)
         },
-        filter:(answer) => {
-          this.pathToUnsignedTransaction = answer;
-          return answer;
-        }
       },
       {
         name:'export',
@@ -270,13 +267,11 @@ export default class IceWalletPrivate extends IceWallet {
         when: (answers) => {
           return (!this.pathToSignedTransaction)
         },
-        filter:(answer) => {
-          this.pathToSignedTransaction = answer
-          return answer;
-        }
       }])
       .then((answers:any) => {
-        fs.readFile(this.pathToUnsignedTransaction,'utf8', (err, serialized) => {
+        var outputPath:string = this.pathToSignedTransaction || answers['export'];
+        var importPath:string = this.pathToUnsignedTransaction || answers['import'];
+        fs.readFile(importPath || answers['import'], 'utf8', (err, serialized) => {
           if(err){
             return callback(err);
           }
@@ -286,16 +281,22 @@ export default class IceWalletPrivate extends IceWallet {
             if (err){
               return callback(err);
             }
+
+            try {
             // add the fee, change script and sign it
             var signed = this.wallet.completeTransaction(serialized, fee);
+            }
+            catch(err){
+              return callback(err);
+            }
             // export the signed transaction
-            fs.writeFile(this.pathToSignedTransaction, signed, (err) => {
+            fs.writeFile(outputPath, signed, (err) => {
               if(err){
                 return callback(err);
               }
               // update the change index count
               this.wallet.incrementChangeIndex();
-              console.log('transaction successfully signed and written to ' + this.pathToSignedTransaction);
+              console.log('transaction successfully signed and written to: ' + outputPath);
               return callback(null);  
             })
           })
@@ -315,7 +316,7 @@ export default class IceWalletPrivate extends IceWallet {
     })
   }
 
-  generateNewAddresses(callback:(err:any) => void){
+  exportAddresses(callback:(err:any) => void){
     inquirer.prompt([
       {
         name:'count',
@@ -326,20 +327,31 @@ export default class IceWalletPrivate extends IceWallet {
         name:'burn',
         message:'Mark these as used? (may cause issues updating public wallet if you dont use them then deposit to this account again)',
         type:'confirm',
-      }])
-      .then((answers:any) => {
-        let count = Number(answers['count']);
-        let burn = Boolean(answers['burn']);
-        let starting = this.wallet.nextExternalIndex;
-        let ending = starting + count - 1;
-        this.wallet.addressRange(starting, ending, false).forEach((address) => {
+      },
+      {
+        name:'path',
+        message:'Type the export path',
+      },
+    ])
+    .then((answers:any) => {
+      let count = Number(answers['count']);
+      let burn = Boolean(answers['burn']);
+      let path:string = answers['path'];
+      let starting = this.wallet.nextExternalIndex;
+      let ending = starting + count - 1;
+      
+      var addresses = this.wallet.addressRange(starting, ending, false)
+      fs.writeFile(path, JSON.stringify(addresses), (err) => {          
+        addresses.forEach((address) => {
           console.log(address);
         })
         if(burn){
           this.wallet.nextExternalIndex += count;
         }
+        console.log('Adress list saved to ' + path);          
         callback(null);
       })
+    })
   }
   changeUsedAddresses(callback:(err:any) => void){
     inquirer.prompt([

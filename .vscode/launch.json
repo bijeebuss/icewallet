@@ -27,7 +27,7 @@
             "request": "launch",
             "program": "${workspaceRoot}/src/CommandLine/iwpub.ts",
             "stopOnEntry": false,
-            "args": ["open", "-w", "/Users/Michael/iceWallets/newPub.dat"],
+            "args": ["open", "-w", "/Users/Michael/iceWallets/accountsPub.dat"],
             "cwd": "${workspaceRoot}",
             "preLaunchTask": null,
             "runtimeExecutable": null,
@@ -48,6 +48,26 @@
             "program": "${workspaceRoot}/src/CommandLine/iwpriv.ts",
             "stopOnEntry": false,
             "args": ["open", "-w", "/Users/Michael/iceWallets/accountsPriv.dat"],
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": null,
+            "runtimeExecutable": null,
+            "runtimeArgs": [
+                "--nolazy"
+            ],
+            "env": {
+                "NODE_ENV": "development"
+            },
+            "externalConsole": true,
+            "sourceMaps": true,
+            "outDir": "${workspaceRoot}/bin"
+        },
+        {
+            "name": "new priv",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceRoot}/src/CommandLine/iwpriv.ts",
+            "stopOnEntry": false,
+            "args": ["new", "-w", "/Users/Michael/iceWallets/accountsPriv.dat"],
             "cwd": "${workspaceRoot}",
             "preLaunchTask": null,
             "runtimeExecutable": null,

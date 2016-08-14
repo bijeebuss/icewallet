@@ -4,7 +4,7 @@ var bitcore = require('bitcore-lib');
 var Mnemonic = require('bitcore-mnemonic');
 
 export class PrivateWalletInfo{
-  // whether to export is determined OnSerialized
+  // whether to serialize is determined OnSerialized
   @deserialize public seed:string
 
   @autoserialize public exportSeed:boolean
